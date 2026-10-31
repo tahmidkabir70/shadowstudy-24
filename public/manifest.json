@@ -1,0 +1,17 @@
+{
+  "name": "Shadow Study — System-inspired Study App",
+  "short_name": "Shadow Study",
+  "description": "A system-inspired study app to turn study sessions into quests, level up, and build consistency.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

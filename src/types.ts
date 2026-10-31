@@ -1,0 +1,201 @@
+export type Rank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S';
+export type JobPath = 'Scholar' | 'Strategist' | 'Endurer' | 'None';
+
+export interface Attributes {
+  knowledge: number;
+  focus: number;
+  discipline: number;
+  memory: number;
+  planning: number;
+  consistency: number;
+  creativity: number;
+  vitality: number;
+}
+
+export interface Player {
+  name: string;
+  level: number;
+  xp: number;
+  rank: Rank;
+  title: string;
+  path: JobPath;
+  gold: number; // Currency from study
+  growthPoints: number;
+  attributes: Attributes;
+  attributeGrades: Record<keyof Attributes, string>;
+  dailyGoalMinutes: number;
+  todayStudyMinutes: number;
+  todayRevisionsDone: number;
+  totalRevisionsDue: number;
+  fatigueMinutes: number; // continuous study without 10m break
+  streak: number;
+  lastActiveDate: string;
+  resilienceUsedThisWeek: boolean;
+  activePassives: string[];
+  unlockedSkills: string[];
+  unlockedTitles: string[];
+  completedDailySet: boolean;
+  lastStatusPopupDate: string;
+}
+
+export type QuestType = 'daily' | 'main' | 'side' | 'hidden' | 'comeback' | 'instant' | 'weekly_boss';
+export type QuestDifficulty = 'easy' | 'medium' | 'hard';
+
+export interface Quest {
+  id: string;
+  title: string;
+  description: string;
+  type: QuestType;
+  difficulty: QuestDifficulty;
+  xpReward: number;
+  goldReward: number;
+  completed: boolean;
+  completedDate?: string;
+  chainId?: string;
+  targetMinutes?: number;
+}
+
+export interface Chapter {
+  id: string;
+  subjectId: string;
+  title: string;
+  learned: boolean;
+  learnedDate?: string;
+  revisionCount: number;
+  nextRevisionDate?: string;
+  lastRevisionDate?: string;
+  intervalStage: number; // 0, 1(1d), 2(3d), 3(7d), 4(14d), 5(30d), 6(60d)
+  extractedToShadow: boolean;
+}
+
+export interface Subject {
+  id: string;
+  name: string;
+  color: string;
+  chapters: Chapter[];
+}
+
+export type ShadowGrade = 'Soldier' | 'Elite' | 'Knight' | 'Elite Knight' | 'Marshal';
+
+export interface Shadow {
+  id: string;
+  chapterId: string;
+  name: string;
+  customNickname?: string;
+  subjectName: string;
+  grade: ShadowGrade;
+  power: number;
+  lastRevisedDate: string;
+  isDormant: boolean;
+  extractedDate: string;
+}
+
+export type GateRank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S';
+
+export interface GateStep {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
+export interface Gate {
+  id: string;
+  title: string;
+  description: string;
+  rank: GateRank;
+  steps: GateStep[];
+  bossTask: string;
+  bossCompleted: boolean;
+  rewardXp: number;
+  rewardGold: number;
+  deadline?: string;
+  cleared: boolean;
+  clearedDate?: string;
+}
+
+export interface PlannerItem {
+  id: string;
+  day: 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
+  time: string;
+  subject: string;
+  task: string;
+  completed: boolean;
+}
+
+export interface NoteItem {
+  id: string;
+  title: string;
+  content: string;
+  subject: string;
+  pinned: boolean;
+  updatedAt: string;
+}
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  type: 'potion' | 'scroll' | 'shield' | 'chest';
+  icon: string;
+  quantity: number;
+}
+
+export interface SkillItem {
+  id: string;
+  name: string;
+  category: 'Focus' | 'Discipline' | 'Knowledge' | 'Time Management';
+  description: string;
+  costPoints: number;
+  unlocked: boolean;
+  bonusText: string;
+}
+
+export interface RewardItem {
+  id: string;
+  title: string;
+  unlocked: boolean;
+  unlockedDate?: string;
+  costGold: number;
+}
+
+export interface SeasonData {
+  currentWeek: number; // 1 to 12
+  seasonName: string;
+  active: boolean;
+  bossDefeated: boolean;
+}
+
+export interface StudySessionLog {
+  id: string;
+  date: string;
+  durationMinutes: number;
+  subject: string;
+  xpEarned: number;
+}
+
+export interface AppSettings {
+  language: 'en' | 'bn';
+  theme: 'dark' | 'light' | 'auto';
+  calmSkin: boolean;
+  animationLevel: 'full' | 'reduced' | 'off';
+  statusWindowFrequency: 'always' | 'daily' | 'never';
+  soundEnabled: boolean;
+}
+
+export interface AppData {
+  player: Player;
+  quests: Quest[];
+  subjects: Subject[];
+  shadows: Shadow[];
+  gates: Gate[];
+  planner: PlannerItem[];
+  notes: NoteItem[];
+  shop: ShopItem[];
+  skills: SkillItem[];
+  rewards: RewardItem[];
+  season: SeasonData;
+  sessions: StudySessionLog[];
+  settings: AppSettings;
+  lastLoginDate: string;
+}

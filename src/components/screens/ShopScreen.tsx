@@ -1,0 +1,52 @@
+import React from 'react';
+import { AppData, ShopItem } from '../../types';
+import { Sparkles, ShoppingBag } from 'lucide-react';
+
+interface Props {
+  data: AppData;
+  onBuyItem: (item: ShopItem) => void;
+}
+
+export const ShopScreen: React.FC<Props> = ({ data, onBuyItem }) => {
+  const { player, shop } = data;
+
+  return (
+    <div className="space-y-6 animate-fadeIn pb-12">
+      <div className="bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-6 flex items-center justify-between">
+        <div>
+          <div className="text-xs font-mono text-cyan-400 tracking-widest">[ SYSTEM SHOP ]</div>
+          <h1 className="text-2xl font-bold font-mono text-white mt-1">Study Boosts & Potions</h1>
+        </div>
+        <div className="bg-yellow-950/40 border border-yellow-500/30 rounded-xl px-4 py-2 font-mono text-xs text-yellow-400 flex items-center gap-1">
+          <Sparkles className="w-4 h-4" /> Gold: {player.gold}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {shop.map((item) => (
+          <div key={item.id} className="bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-mono text-yellow-400 flex items-center gap-1 font-bold">
+                  <Sparkles className="w-3.5 h-3.5" /> {item.cost} Gold
+                </span>
+                <span className="text-xs font-mono text-cyan-400">Owned: {item.quantity}</span>
+              </div>
+              <h3 className="text-lg font-bold font-mono text-white mb-1">{item.name}</h3>
+              <p className="text-xs font-mono text-cyan-400/80 mb-4">{item.description}</p>
+            </div>
+            <button
+              onClick={() => onBuyItem(item)}
+              disabled={player.gold < item.cost}
+              className={`w-full py-2.5 rounded-xl font-mono text-xs font-bold uppercase transition-all ${
+                player.gold >= item.cost ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow' : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+              }`}
+            >
+              Purchase Item
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
