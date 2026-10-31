@@ -1,14 +1,29 @@
-const CACHE = 'shadow-study-v2';
-const PRECACHE = ['/', '/index.html', '/manifest.json', '/icons/icon.svg'];
+const CACHE = 'shadow-study-v3';
+const CORE = ['/', '/index.html', '/manifest.json', '/icons/icon.svg'];
+
+async function precache() {
+  const cache = await caches.open(CACHE);
+  await Promise.all(CORE.map((u) => cache.add(u).catch(() => {})));
+  
+  // index.html পড়ে অ্যাপের আসল JS/CSS ফাইলগুলো খুঁজে ক্যাশে রাখা
+  try {
+    const res = await fetch('/index.html', { cache: 'no-store' });
+    const html = await res.text();
+    const found = new Set();
+    const re = /(?:src|href)=["']([^"']+)["']/g;
+    let m;
+    while ((m = re.exec(html))) {
+      const u = new URL(m[1], self.location.origin + '/');
+      if (u.origin === self.location.origin && u.pathname.startsWith('/assets/')) {
+        found.add(u.pathname);
+      }
+    }
+    await Promise.all([...found].map((u) => cache.add(u).catch(() => {})));
+  } catch (e) {}
+}
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-    .open(CACHE)
-    .then((cache) => cache.addAll(PRECACHE))
-    .catch(() => {})
-    .then(() => self.skipWaiting())
-  );
+  event.waitUntil(precache().then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
