@@ -18,6 +18,8 @@ export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled })
   const [goalMinutes, setGoalMinutes] = useState(60);
   const [restoreError, setRestoreError] = useState('');
   const [restoreDone, setRestoreDone] = useState(false);
+  const [pasteText, setPasteText] = useState('');
+  const [showPaste, setShowPaste] = useState(false);
   
   useEffect(() => {
     if (step !== 'boot') return;
@@ -50,33 +52,35 @@ export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled })
     onComplete(name.trim(), path, goalMinutes, goalTitle);
   };
   
+  const restoreFromContent = (content: string) => {
+    setRestoreError('');
+    let parsed: { player ? : { name ? : string };quests ? : unknown } | null = null;
+    try {
+      parsed = JSON.parse(content.trim());
+    } catch {
+      parsed = null;
+    }
+    const valid =
+      parsed &&
+      parsed.player &&
+      parsed.quests &&
+      parsed.player.name &&
+      parsed.player.name !== 'Player';
+    if (valid && importBackup(content.trim())) {
+      sound.playSuccess(soundEnabled);
+      setRestoreDone(true);
+      setTimeout(() => window.location.reload(), 900);
+    } else {
+      setRestoreError('Invalid backup data. Please use the backup you exported from Settings.');
+    }
+  };
+  
   const handleRestoreFile = (e: React.ChangeEvent < HTMLInputElement > ) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setRestoreError('');
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const content = String(ev.target?.result || '');
-      let parsed: { player ? : { name ? : string };quests ? : unknown } | null = null;
-      try {
-        parsed = JSON.parse(content);
-      } catch {
-        parsed = null;
-      }
-      const valid =
-        parsed &&
-        parsed.player &&
-        parsed.quests &&
-        parsed.player.name &&
-        parsed.player.name !== 'Player';
-      if (valid && importBackup(content)) {
-        sound.playSuccess(soundEnabled);
-        setRestoreDone(true);
-        setTimeout(() => window.location.reload(), 900);
-      } else {
-        setRestoreError('Invalid backup file. Please choose the .json file you exported from Settings.');
-      }
-    };
+    reader.onload = (ev) => restoreFromContent(String(ev.target?.result || ''));
     reader.onerror = () => setRestoreError('Could not read the file. Please try again.');
     reader.readAsText(file);
     e.target.value = '';
@@ -126,11 +130,38 @@ export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled })
               <Upload className="w-4 h-4" /> Import Backup
               <input
                 type="file"
-                accept=".json,application/json"
                 onChange={handleRestoreFile}
                 className="hidden"
               />
             </label>
+
+            <button
+              type="button"
+              onClick={() => setShowPaste(!showPaste)}
+              className="w-full text-[11px] text-slate-400 hover:text-white underline underline-offset-4 cursor-pointer"
+            >
+              Can't select the file? Paste backup text instead
+            </button>
+
+            {showPaste && (
+              <div className="space-y-2">
+                <textarea
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                  placeholder="Paste the full contents of your backup .json file here"
+                  rows={5}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                />
+                <button
+                  type="button"
+                  disabled={!pasteText.trim()}
+                  onClick={() => restoreFromContent(pasteText)}
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg text-xs uppercase tracking-widest cursor-pointer"
+                >
+                  Restore From Text
+                </button>
+              </div>
+            )}
 
             {restoreError && (
               <div className="text-xs text-red-400 bg-red-950/30 border border-red-900/50 rounded-lg p-3">{restoreError}</div>
