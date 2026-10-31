@@ -35,7 +35,10 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   const lang = data.settings.language;
-  const isOnboarding = !data.player.name || data.player.name === 'Player';
+  // Welcome flag: show New/Old Hunter only on first visit (or after Reset Data)
+  const isWelcomeDone = typeof localStorage !== 'undefined' && localStorage.getItem('SHADOW_STUDY_WELCOME_DONE') === '1';
+  const hasValidName = Boolean(data.player.name && data.player.name !== 'Player');
+  const isOnboarding = !isWelcomeDone || !hasValidName;
 
   useEffect(() => {
     saveAppData(data);
@@ -99,6 +102,11 @@ export default function App() {
   };
 
   const handleCompleteOnboarding = (name: string, path: JobPath, goalMinutes: number, goalTitle: string) => {
+    try {
+      localStorage.setItem('SHADOW_STUDY_WELCOME_DONE', '1');
+    } catch {
+      // ignore
+    }
     setData((prev) => ({
       ...prev,
       player: {
@@ -315,7 +323,7 @@ export default function App() {
 
       const updatedGates = prev.gates.map((g) => (g.id === gateId ? { ...g, bossCompleted: true, cleared: true, clearedDate: new Date().toISOString().split('T')[0] } : g));
       const nextData = { ...prev, gates: updatedGates };
-      showToast(`Boss Defeated! Gate Cleared. +${gate.rewardXp} XP & +${gate.rewardGold} Credits`);
+      showToast(`Boss Defeated! Gate Cleared. +\( {gate.rewardXp} XP & + \){gate.rewardGold} Credits`);
       return addXpAndGold(nextData, gate.rewardXp, gate.rewardGold);
     });
   };
@@ -443,6 +451,7 @@ export default function App() {
 
   const handleResetData = () => {
     localStorage.removeItem('SHADOW_STUDY_DATA_V2');
+    localStorage.removeItem('SHADOW_STUDY_WELCOME_DONE');
     window.location.reload();
   };
 

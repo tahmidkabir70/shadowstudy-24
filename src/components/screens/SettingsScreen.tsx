@@ -10,10 +10,10 @@ interface Props {
   onImportData: (data: AppData) => void;
 }
 
-export const SettingsScreen: React.FC<Props> = ({ data, onUpdateSettings, onResetData, onImportData }) => {
+export const SettingsScreen: React.FC < Props > = ({ data, onUpdateSettings, onResetData, onImportData }) => {
   const { settings } = data;
-
-  const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  
+  const handleFileImport = (e: React.ChangeEvent < HTMLInputElement > ) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -28,8 +28,9 @@ export const SettingsScreen: React.FC<Props> = ({ data, onUpdateSettings, onRese
       }
     };
     reader.readAsText(file);
+    e.target.value = '';
   };
-
+  
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       <div className="pro-card p-6">
@@ -104,7 +105,8 @@ export const SettingsScreen: React.FC<Props> = ({ data, onUpdateSettings, onRese
             </button>
             <label className="bg-slate-900 border border-slate-800 text-slate-300 hover:text-white font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2 cursor-pointer">
               <Upload className="w-4 h-4" /> Import Backup
-              <input type="file" accept=".json" onChange={handleFileImport} className="hidden" />
+              {/* no accept= so Android file picker does not grey out .json */}
+              <input type="file" onChange={handleFileImport} className="hidden" />
             </label>
           </div>
         </div>

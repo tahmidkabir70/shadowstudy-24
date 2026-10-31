@@ -4,6 +4,8 @@ import { sound } from '../utils/sound';
 import { importBackup } from '../utils/storage';
 import { Sparkles, Terminal, Upload, UserPlus, ArrowLeft } from 'lucide-react';
 
+const WELCOME_FLAG = 'SHADOW_STUDY_WELCOME_DONE';
+
 interface Props {
   onComplete: (name: string, path: JobPath, goalMinutes: number, goalTitle: string) => void;
   soundEnabled: boolean;
@@ -49,6 +51,11 @@ export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled })
     e.preventDefault();
     if (!name.trim()) return;
     sound.playSuccess(soundEnabled);
+    try {
+      localStorage.setItem(WELCOME_FLAG, '1');
+    } catch {
+      // ignore
+    }
     onComplete(name.trim(), path, goalMinutes, goalTitle);
   };
   
@@ -67,6 +74,11 @@ export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled })
       parsed.player.name &&
       parsed.player.name !== 'Player';
     if (valid && importBackup(content.trim())) {
+      try {
+        localStorage.setItem(WELCOME_FLAG, '1');
+      } catch {
+        // ignore
+      }
       sound.playSuccess(soundEnabled);
       setRestoreDone(true);
       setTimeout(() => window.location.reload(), 900);
