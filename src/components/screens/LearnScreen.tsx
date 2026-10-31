@@ -1,32 +1,52 @@
 import React, { useState } from 'react';
-import { AppData, Chapter, Subject } from '../../types';
-import { BookOpen, CheckCircle, Clock, Plus, RefreshCw, Ghost, Sparkles } from 'lucide-react';
+import { AppData, Chapter } from '../../types';
+import { BookOpen, Plus, Ghost } from 'lucide-react';
 
 interface Props {
   data: AppData;
+  onAddSubject: (name: string) => string;
   onAddChapter: (subjectId: string, title: string) => void;
   onMarkLearned: (subjectId: string, chapterId: string) => void;
   onReviewChapter: (subjectId: string, chapterId: string, rating: 'hard' | 'good' | 'easy') => void;
   onExtractShadow: (chapter: Chapter, subjectName: string) => void;
 }
 
-export const LearnScreen: React.FC<Props> = ({ data, onAddChapter, onMarkLearned, onReviewChapter, onExtractShadow }) => {
-  const [selectedSubId, setSelectedSubId] = useState<string>(data.subjects[0]?.id || '');
-  const [newChapTitle, setNewChapTitle] = useState<string>('');
-  const [showAddModal, setShowAddModal] = useState<boolean>(false);
-
+export const LearnScreen: React.FC < Props > = ({ data, onAddSubject, onAddChapter, onMarkLearned, onReviewChapter, onExtractShadow }) => {
+  const [selectedSubId, setSelectedSubId] = useState < string > (data.subjects[0]?.id || '');
+  const [newChapTitle, setNewChapTitle] = useState < string > ('');
+  const [newSubName, setNewSubName] = useState < string > ('');
+  const [showAddModal, setShowAddModal] = useState < boolean > (false);
+  const [showSubModal, setShowSubModal] = useState < boolean > (false);
+  
   const activeSub = data.subjects.find((s) => s.id === selectedSubId) || data.subjects[0];
-
+  
   const handleAddChap = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newChapTitle.trim() || !activeSub) return;
-    onAddChapter(activeSub.id, newChapTitle);
+    onAddChapter(activeSub.id, newChapTitle.trim());
     setNewChapTitle('');
     setShowAddModal(false);
   };
-
+  
+  const handleAddSub = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubName.trim()) return;
+    const newId = onAddSubject(newSubName);
+    setSelectedSubId(newId);
+    setNewSubName('');
+    setShowSubModal(false);
+  };
+  
+  const openAddChapter = () => {
+    if (data.subjects.length === 0) {
+      setShowSubModal(true);
+    } else {
+      setShowAddModal(true);
+    }
+  };
+  
   const todayStr = new Date().toISOString().split('T')[0];
-
+  
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       {/* Header */}
@@ -37,35 +57,66 @@ export const LearnScreen: React.FC<Props> = ({ data, onAddChapter, onMarkLearned
           <p className="text-xs font-mono text-cyan-300 mt-0.5">Master chapters and unlock Shadow Army extractions.</p>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs uppercase px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all cursor-pointer"
-        >
-          <Plus className="w-4 h-4" /> Add Chapter
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setShowSubModal(true)}
+            className="bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 font-mono text-xs uppercase px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Add Subject
+          </button>
+          <button
+            onClick={openAddChapter}
+            className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs uppercase px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Add Chapter
+          </button>
+        </div>
       </div>
 
-      {/* Subject Tabs */}
-      <div className="flex overflow-x-auto gap-2 pb-2">
-        {data.subjects.map((sub) => (
+      {/* Empty state: no subjects yet */}
+      {data.subjects.length === 0 && (
+        <div className="bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-8 text-center space-y-4">
+          <BookOpen className="w-10 h-10 text-cyan-400 mx-auto" />
+          <div className="text-white font-mono font-bold text-base">No subjects yet</div>
+          <p className="text-xs font-mono text-cyan-300/80">
+            Add your first subject (for example Physics or Bangla) to start adding chapters.
+          </p>
           <button
-            key={sub.id}
-            onClick={() => setSelectedSubId(sub.id)}
-            className={`px-5 py-3 rounded-xl font-mono text-xs uppercase font-bold whitespace-nowrap transition-all ${
-              selectedSubId === sub.id
-                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)]'
-                : 'bg-slate-900 text-cyan-400 border border-cyan-500/30 hover:border-cyan-400'
-            }`}
+            onClick={() => setShowSubModal(true)}
+            className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs uppercase px-5 py-2.5 rounded-xl font-bold cursor-pointer"
           >
-            {sub.name} ({sub.chapters.length})
+            Add First Subject
           </button>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* Subject Tabs */}
+      {data.subjects.length > 0 && (
+        <div className="flex overflow-x-auto gap-2 pb-2">
+          {data.subjects.map((sub) => (
+            <button
+              key={sub.id}
+              onClick={() => setSelectedSubId(sub.id)}
+              className={`px-5 py-3 rounded-xl font-mono text-xs uppercase font-bold whitespace-nowrap transition-all ${
+                activeSub && activeSub.id === sub.id
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                  : 'bg-slate-900 text-cyan-400 border border-cyan-500/30 hover:border-cyan-400'
+              }`}
+            >
+              {sub.name} ({sub.chapters.length})
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Chapters List */}
       {activeSub && (
         <div className="bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-6 shadow-lg space-y-4">
           <h2 className="text-sm font-mono text-cyan-400 tracking-wider mb-2">CHAPTERS IN {activeSub.name.toUpperCase()}</h2>
+
+          {activeSub.chapters.length === 0 && (
+            <div className="text-xs font-mono text-slate-400">No chapters yet. Tap "Add Chapter" to create the first one.</div>
+          )}
 
           <div className="space-y-3">
             {activeSub.chapters.map((ch) => {
@@ -153,11 +204,51 @@ export const LearnScreen: React.FC<Props> = ({ data, onAddChapter, onMarkLearned
         </div>
       )}
 
+      {/* Add Subject Modal */}
+      {showSubModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fadeIn">
+          <div className="w-full max-w-md bg-slate-900 border-2 border-cyan-500 rounded-2xl p-6 shadow-[0_0_30px_rgba(6,182,212,0.3)]">
+            <h2 className="text-lg font-mono font-bold text-cyan-300 mb-4">[ ADD SUBJECT ]</h2>
+            <form onSubmit={handleAddSub} className="space-y-4 font-mono text-xs">
+              <div>
+                <label className="text-cyan-400 block mb-1">Subject Name</label>
+                <input
+                  type="text"
+                  value={newSubName}
+                  onChange={(e) => setNewSubName(e.target.value)}
+                  placeholder="e.g. Physics"
+                  className="w-full bg-slate-950 border border-cyan-500/40 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowSubModal(false)}
+                  className="px-4 py-2 rounded-xl border border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow"
+                >
+                  Create Subject
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Add Chapter Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fadeIn">
           <div className="w-full max-w-md bg-slate-900 border-2 border-cyan-500 rounded-2xl p-6 shadow-[0_0_30px_rgba(6,182,212,0.3)]">
-            <h2 className="text-lg font-mono font-bold text-cyan-300 mb-4">[ ADD CHAPTER ]</h2>
+            <h2 className="text-lg font-mono font-bold text-cyan-300 mb-1">[ ADD CHAPTER ]</h2>
+            {activeSub && (
+              <div className="text-xs font-mono text-cyan-400/80 mb-4">Subject: {activeSub.name}</div>
+            )}
             <form onSubmit={handleAddChap} className="space-y-4 font-mono text-xs">
               <div>
                 <label className="text-cyan-400 block mb-1">Chapter Title</label>

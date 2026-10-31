@@ -166,6 +166,22 @@ export default function App() {
     });
   };
 
+  const handleAddSubject = (name: string): string => {
+    const id = `sub_${Date.now()}`;
+    const colors = ['#06b6d4', '#a855f7', '#22c55e', '#f59e0b', '#ef4444', '#3b82f6'];
+    setData((prev) => {
+      const newSub: Subject = {
+        id,
+        name: name.trim(),
+        color: colors[prev.subjects.length % colors.length],
+        chapters: [],
+      };
+      return { ...prev, subjects: [...prev.subjects, newSub] };
+    });
+    showToast('Subject registered.');
+    return id;
+  };
+
   const handleAddChapter = (subjectId: string, title: string) => {
     setData((prev) => {
       const updatedSubjects = prev.subjects.map((sub) => {
@@ -615,7 +631,7 @@ export default function App() {
         {currentTab === 'today' && <TodayScreen data={data} onNavigate={setCurrentTab} onCompleteQuest={handleCompleteQuest} onOpenStatus={() => setShowStatusPopup(true)} />}
         {currentTab === 'quests' && <QuestsScreen data={data} onCompleteQuest={handleCompleteQuest} onAddQuest={handleAddQuest} onDeleteQuest={handleDeleteQuest} />}
         {currentTab === 'focus' && <FocusScreen data={data} onFinishSession={handleFinishFocusSession} />}
-        {currentTab === 'learn' && <LearnScreen data={data} onAddChapter={handleAddChapter} onMarkLearned={handleMarkLearned} onReviewChapter={handleReviewChapter} onExtractShadow={handleExtractShadow} />}
+        {currentTab === 'learn' && <LearnScreen data={data} onAddSubject={handleAddSubject} onAddChapter={handleAddChapter} onMarkLearned={handleMarkLearned} onReviewChapter={handleReviewChapter} onExtractShadow={handleExtractShadow} />}
         {currentTab === 'gates' && <GatesScreen data={data} onAddGate={handleAddGate} onToggleGateStep={handleToggleGateStep} onCompleteBoss={handleCompleteBoss} onTriggerDoubleDungeon={setDoubleDungeonTitle} />}
         {currentTab === 'army' && <ArmyScreen data={data} onUpdateNickname={handleUpdateNickname} />}
         {currentTab === 'character' && <CharacterScreen data={data} onAllocatePoint={handleAllocatePoint} onSelectPath={handleSelectPath} onUseResilience={handleUseResilience} onUnlockReward={handleUnlockReward} />}
