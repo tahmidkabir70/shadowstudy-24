@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AppData, AppSettings, Chapter, Gate, JobPath, NoteItem, PlannerItem, Player, Quest, ShopItem, Subject } from './types';
 import { loadAppData, saveAppData } from './utils/storage';
 import { addXpAndGold, getNextRevisionDays } from './utils/gameLogic';
-import { localDateStr, daysBetween, addDays } from './utils/date';
+import { localDateStr, daysBetween, addDays } from './utils/data';
 import { t } from './utils/i18n';
 import { StatusWindowModal } from './components/StatusWindowModal';
 import { AriseModal } from './components/AriseModal';
@@ -592,6 +592,9 @@ export default function App() {
 
   const handleImportData = (imported: AppData) => {
     setData(imported);
+    setTimeout(() => {
+      runDailyCheck();
+    }, 0);
   };
 
   if (isOnboarding) {
@@ -691,7 +694,7 @@ export default function App() {
       )}
 
       {/* Top Header with Hamburger Menu */}
-      <header className="sticky top-0 z-40 bg-[#090d16]/95 backdrop-blur border-b border-slate-800 px-4 lg:px-8 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-[#090d16]/98 backdrop-blur border-b border-slate-800 px-4 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
