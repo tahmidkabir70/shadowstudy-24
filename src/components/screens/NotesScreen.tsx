@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AppData, NoteItem } from '../../types';
+import { localDateStr } from '../../utils/date';
 import { FileText, Plus, Pin, Trash2, Search } from 'lucide-react';
 
 interface Props {
@@ -9,31 +10,31 @@ interface Props {
   onDeleteNote: (id: string) => void;
 }
 
-export const NotesScreen: React.FC<Props> = ({ data, onAddNote, onTogglePin, onDeleteNote }) => {
+export const NotesScreen: React.FC < Props > = ({ data, onAddNote, onTogglePin, onDeleteNote }) => {
   const [search, setSearch] = useState('');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [subject, setSubject] = useState('General');
   const [showModal, setShowModal] = useState(false);
-
+  
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     onAddNote({
-      id: `note_${Date.now()}`,
+      id: 'note_' + Date.now(),
       title,
       content,
       subject,
       pinned: false,
-      updatedAt: new Date().toISOString().split('T')[0],
+      updatedAt: localDateStr(),
     });
     setTitle('');
     setContent('');
     setShowModal(false);
   };
-
+  
   const filtered = data.notes.filter((n) => n.title.toLowerCase().includes(search.toLowerCase()) || n.content.toLowerCase().includes(search.toLowerCase()));
-
+  
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-6">

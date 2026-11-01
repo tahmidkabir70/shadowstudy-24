@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" style="background:#090d16">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,10 +11,39 @@
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#090d16" />
+    <style>
+      html, body { background: #090d16; margin: 0; }
+      #boot-msg { color: #94a3b8; font-family: sans-serif; padding: 24px; }
+      #err-box {
+        display: none; position: fixed; left: 0; right: 0; bottom: 0;
+        max-height: 60vh; overflow: auto; margin: 0; padding: 12px;
+        background: #1a0b0b; color: #ff8a8a; font-size: 12px;
+        white-space: pre-wrap; word-break: break-all; z-index: 99999;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div id="boot-msg">Loading...</div></div>
+    <pre id="err-box"></pre>
+    <script>
+      (function () {
+        var box = document.getElementById('err-box');
+        function show(msg) {
+          box.style.display = 'block';
+          box.textContent += msg + '\n\n';
+        }
+        window.addEventListener('error', function (e) {
+          if (e.target && e.target !== window) {
+            show('LOAD FAIL: ' + (e.target.src || e.target.href || e.target.tagName));
+          } else {
+            show('ERROR: ' + e.message + (e.filename ? ' @ ' + e.filename + ':' + e.lineno : ''));
+          }
+        }, true);
+        window.addEventListener('unhandledrejection', function (e) {
+          show('PROMISE: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

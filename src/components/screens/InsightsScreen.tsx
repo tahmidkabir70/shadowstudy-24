@@ -1,16 +1,17 @@
 import React from 'react';
 import { AppData } from '../../types';
+import { localDateStr } from '../../utils/date';
 import { BarChart2, Clock, Award, Flame, BookOpen } from 'lucide-react';
 
 interface Props {
   data: AppData;
 }
 
-export const InsightsScreen: React.FC<Props> = ({ data }) => {
+export const InsightsScreen: React.FC < Props > = ({ data }) => {
   const { player, sessions, subjects } = data;
   const totalMins = sessions.reduce((acc, s) => acc + s.durationMinutes, 0) + player.todayStudyMinutes;
   const totalHours = Math.round((totalMins / 60) * 10) / 10;
-
+  
   // Total revisions count across subjects
   let totalRevisions = 0;
   subjects.forEach((sub) => {
@@ -18,21 +19,23 @@ export const InsightsScreen: React.FC<Props> = ({ data }) => {
       totalRevisions += ch.revisionCount;
     });
   });
-
+  
+  const todayStr = localDateStr();
+  
   // Last 7 days study minutes
   const last7Days = [...Array(7)].map((_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = localDateStr(d);
     const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
     const dayMins = sessions
       .filter((s) => s.date === dateStr)
-      .reduce((acc, s) => acc + s.durationMinutes, 0) + (dateStr === new Date().toISOString().split('T')[0] ? player.todayStudyMinutes : 0);
+      .reduce((acc, s) => acc + s.durationMinutes, 0) + (dateStr === todayStr ? player.todayStudyMinutes : 0);
     return { dayName, dayMins };
   });
-
+  
   const maxDayMins = Math.max(60, ...last7Days.map((d) => d.dayMins));
-
+  
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       <div className="pro-card p-6">
@@ -73,7 +76,7 @@ export const InsightsScreen: React.FC<Props> = ({ data }) => {
                 <span className="text-[10px] text-slate-400 font-mono">{item.dayMins}m</span>
                 <div 
                   className="w-full max-w-[40px] bg-blue-600 hover:bg-blue-500 rounded-t transition-all duration-500 shadow"
-                  style={{ height: `${Math.max(8, heightPercent)}%` }}
+                  style={{ height: Math.max(8, heightPercent) + '%' }}
                 ></div>
                 <span className="text-xs text-slate-300 font-medium">{item.dayName}</span>
               </div>
@@ -102,7 +105,7 @@ export const InsightsScreen: React.FC<Props> = ({ data }) => {
                     <span className="text-blue-400">{learnedCount} / {totalCount} Chapters ({pct}%)</span>
                   </div>
                   <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
-                    <div className="bg-indigo-500 h-full" style={{ width: `${pct}%` }}></div>
+                    <div className="bg-indigo-500 h-full" style={{ width: pct + '%' }}></div>
                   </div>
                 </div>
               );

@@ -30,7 +30,11 @@ export interface Player {
   fatigueMinutes: number; // continuous study without 10m break
   streak: number;
   lastActiveDate: string;
+  lastStudyDate: string; // local date (YYYY-MM-DD) of the last study action that counted for the streak
   resilienceUsedThisWeek: boolean;
+  resilienceUsedDate: string; // local date (YYYY-MM-DD) when Resilience was activated
+  focusPotionActive: boolean; // Focus Potion armed: next focus session gives +50% XP
+  revisionScrollActive: boolean; // Revision Scroll armed: next review jumps one extra stage
   activePassives: string[];
   unlockedSkills: string[];
   unlockedTitles: string[];

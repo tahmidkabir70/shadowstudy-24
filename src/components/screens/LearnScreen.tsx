@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AppData, Chapter } from '../../types';
+import { localDateStr } from '../../utils/date';
 import { BookOpen, Plus, Ghost } from 'lucide-react';
 
 interface Props {
@@ -45,7 +46,7 @@ export const LearnScreen: React.FC < Props > = ({ data, onAddSubject, onAddChapt
     }
   };
   
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateStr();
   
   return (
     <div className="space-y-6 animate-fadeIn pb-12">

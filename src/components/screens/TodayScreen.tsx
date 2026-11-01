@@ -1,6 +1,7 @@
 import React from 'react';
 import { AppData, Quest } from '../../types';
 import { calculateXpForNextLevel } from '../../utils/gameLogic';
+import { localDateStr } from '../../utils/date';
 import { Flame, CheckCircle, Target, Sparkles, ArrowRight, Shield, Clock } from 'lucide-react';
 
 interface Props {
@@ -10,17 +11,17 @@ interface Props {
   onOpenStatus: () => void;
 }
 
-export const TodayScreen: React.FC<Props> = ({ data, onNavigate, onCompleteQuest, onOpenStatus }) => {
+export const TodayScreen: React.FC < Props > = ({ data, onNavigate, onCompleteQuest, onOpenStatus }) => {
   const { player, quests, subjects, shadows } = data;
   const reqXp = calculateXpForNextLevel(player.level);
   const xpPercent = Math.min(100, Math.round((player.xp / reqXp) * 100));
   const studyPercent = Math.min(100, Math.round((player.todayStudyMinutes / Math.max(1, player.dailyGoalMinutes)) * 100));
-
+  
   const pendingQuests = quests.filter((q) => !q.completed);
   const totalShadowPower = shadows.reduce((acc, s) => acc + (s.isDormant ? Math.round(s.power / 2) : s.power), 0);
-
+  
   let dueRevisionsCount = 0;
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateStr();
   subjects.forEach((sub) => {
     sub.chapters.forEach((ch) => {
       if (ch.learned && ch.nextRevisionDate && ch.nextRevisionDate <= todayStr) {
@@ -28,7 +29,7 @@ export const TodayScreen: React.FC<Props> = ({ data, onNavigate, onCompleteQuest
       }
     });
   });
-
+  
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Player Header Card */}
@@ -71,7 +72,7 @@ export const TodayScreen: React.FC<Props> = ({ data, onNavigate, onCompleteQuest
             <span className="text-blue-400 font-semibold">{player.xp} / {reqXp} XP ({xpPercent}%)</span>
           </div>
           <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-500 h-full transition-all duration-500" style={{ width: `${xpPercent}%` }}></div>
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-500 h-full transition-all duration-500" style={{ width: xpPercent + '%' }}></div>
           </div>
         </div>
       </div>
@@ -83,7 +84,7 @@ export const TodayScreen: React.FC<Props> = ({ data, onNavigate, onCompleteQuest
             <div className="text-[11px] text-slate-400 font-medium tracking-wider mb-1">DAILY STUDY TARGET</div>
             <div className="text-2xl font-bold text-white">{player.todayStudyMinutes} <span className="text-xs text-slate-400 font-normal">/ {player.dailyGoalMinutes} mins</span></div>
             <div className="w-32 bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800 mt-2.5">
-              <div className="bg-blue-500 h-full" style={{ width: `${studyPercent}%` }}></div>
+              <div className="bg-blue-500 h-full" style={{ width: studyPercent + '%' }}></div>
             </div>
           </div>
           <button

@@ -76,20 +76,6 @@ export const SettingsScreen: React.FC < Props > = ({ data, onUpdateSettings, onR
           </button>
         </div>
 
-        {/* Calm Skin Toggle */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-          <div>
-            <div className="text-white font-bold text-sm">CALM SKIN MODE</div>
-            <div className="text-slate-400">Remove RPG terminology for a normal student interface</div>
-          </div>
-          <button
-            onClick={() => onUpdateSettings({ ...settings, calmSkin: !settings.calmSkin })}
-            className={`px-4 py-2 rounded-lg border font-semibold ${settings.calmSkin ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-900 border-slate-800 text-slate-400'}`}
-          >
-            {settings.calmSkin ? 'Active' : 'Inactive'}
-          </button>
-        </div>
-
         {/* Backup & Restore */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
           <div>

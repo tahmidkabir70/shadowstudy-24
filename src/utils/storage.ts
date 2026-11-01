@@ -1,4 +1,5 @@
 import { AppData, AppSettings, Gate, NoteItem, PlannerItem, Player, Quest, RewardItem, SeasonData, ShopItem, SkillItem, Subject } from '../types';
+import { localDateStr } from './date';
 
 const STORAGE_KEY = 'SHADOW_STUDY_DATA_V2';
 
@@ -46,8 +47,12 @@ const defaultPlayer: Player = {
   totalRevisionsDue: 0,
   fatigueMinutes: 0,
   streak: 1,
-  lastActiveDate: new Date().toISOString().split('T')[0],
+  lastActiveDate: localDateStr(),
+  lastStudyDate: '',
   resilienceUsedThisWeek: false,
+  resilienceUsedDate: '',
+  focusPotionActive: false,
+  revisionScrollActive: false,
   activePassives: [],
   unlockedSkills: [],
   unlockedTitles: ['The Weakest Player'],
@@ -105,6 +110,15 @@ const defaultSeason: SeasonData = {
   bossDefeated: false,
 };
 
+// Fills in any field that older saved data / old backups do not have yet.
+function normalizeData(parsed: AppData): AppData {
+  return {
+    ...parsed,
+    player: { ...defaultPlayer, ...(parsed.player || {}) },
+    settings: { ...defaultSettings, ...(parsed.settings || {}) },
+  };
+}
+
 export function loadAppData(): AppData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -123,13 +137,13 @@ export function loadAppData(): AppData {
         season: defaultSeason,
         sessions: [],
         settings: defaultSettings,
-        lastLoginDate: new Date().toISOString().split('T')[0],
+        lastLoginDate: localDateStr(),
       };
       saveAppData(initial);
       return initial;
     }
     const parsed: AppData = JSON.parse(raw);
-    return { ...parsed, settings: { ...defaultSettings, ...(parsed.settings || {}) } };
+    return normalizeData(parsed);
   } catch {
     const fallback: AppData = {
       player: defaultPlayer,
@@ -145,7 +159,7 @@ export function loadAppData(): AppData {
       season: defaultSeason,
       sessions: [],
       settings: defaultSettings,
-      lastLoginDate: new Date().toISOString().split('T')[0],
+      lastLoginDate: localDateStr(),
     };
     return fallback;
   }
@@ -163,7 +177,7 @@ export function exportBackup(data: AppData) {
   const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
   const downloadAnchor = document.createElement('a');
   downloadAnchor.setAttribute('href', dataStr);
-  downloadAnchor.setAttribute('download', `shadow_study_backup_${new Date().toISOString().split('T')[0]}.json`);
+  downloadAnchor.setAttribute('download', 'shadow_study_backup_' + localDateStr() + '.json');
   document.body.appendChild(downloadAnchor);
   downloadAnchor.click();
   downloadAnchor.remove();
@@ -173,8 +187,9 @@ export function importBackup(jsonString: string): AppData | null {
   try {
     const parsed = JSON.parse(jsonString);
     if (parsed && parsed.player && parsed.quests) {
-      saveAppData(parsed);
-      return parsed;
+      const normalized = normalizeData(parsed as AppData);
+      saveAppData(normalized);
+      return normalized;
     }
     return null;
   } catch {
