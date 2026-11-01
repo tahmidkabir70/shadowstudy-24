@@ -91,29 +91,34 @@ export default function App() {
       const diffDays = daysBetween(lastActive, todayStr);
       if (diffDays < 0) return prev; // device clock moved backwards: ignore
 
-      let streak = prev.player.streak;
-      let shop = prev.shop;
-      let lastStudyDate = prev.player.lastStudyDate;
-      if (diffDays > 1) {
-        if (prev.player.resilienceUsedThisWeek) {
-          showToast('Streak protected by Resilience!');
-        } else if (diffDays === 2 && prev.player.streak > 1) {
-          const shieldItem = prev.shop.find((s) => s.type === 'shield' && s.quantity > 0);
-          if (shieldItem) {
-            shop = prev.shop.map((s) =>
-              s.id === shieldItem.id ? { ...s, quantity: s.quantity - 1 } : s
-            );
-            lastStudyDate = addDays(todayStr, -1);
-            showToast('Streak Shield used! Your streak is saved.');
-          } else {
-            streak = 1;
-            showToast('Streak reset due to inactivity. A Comeback Quest has been issued.');
-          }
-        } else {
-          streak = 1;
-          showToast('Streak reset due to inactivity. A Comeback Quest has been issued.');
-        }
-      }
+      
+let streak = prev.player.streak;
+let shop = prev.shop;
+let lastStudyDate = prev.player.lastStudyDate;
+
+if (diffDays > 1) {
+  showToast('DEBUG d=' + diffDays + ' s=' + prev.player.streak + ' sh=' + (prev.shop.find(function(x){return x.type==='shield';}) || {quantity:0}).quantity);
+
+  if (prev.player.resilienceUsedThisWeek) {
+    showToast('Streak protected by Resilience!');
+  } else if (diffDays === 2 && prev.player.streak > 1) {
+    const shieldItem = prev.shop.find((s) => s.type === 'shield' && s.quantity > 0);
+
+    if (shieldItem) {
+      shop = prev.shop.map((s) =>
+        s.id === shieldItem.id ? { ...s, quantity: s.quantity - 1 } : s
+      );
+      lastStudyDate = addDays(todayStr, -1);
+      showToast('Streak Shield used! Your streak is saved.');
+    } else {
+      streak = 1;
+      showToast('Streak reset due to inactivity. A Comeback Quest has been issued.');
+    }
+  } else {
+    streak = 1;
+    showToast('Streak reset due to inactivity. A Comeback Quest has been issued.');
+  }
+}
 
       // Resilience can be used once per 7 days (counted from the day it was activated).
       let resilienceUsed = prev.player.resilienceUsedThisWeek;
