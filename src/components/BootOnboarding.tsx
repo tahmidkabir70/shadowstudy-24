@@ -11,18 +11,18 @@ interface Props {
   soundEnabled: boolean;
 }
 
-export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled }) => {
-  const [step, setStep] = useState < 'welcome' | 'restore' | 'boot' | 'name' | 'path' | 'goal' > ('welcome');
-  const [logLines, setLogLines] = useState < string[] > ([]);
+export const BootOnboarding: React.FC<Props> = ({ onComplete, soundEnabled }) => {
+  const [step, setStep] = useState<'welcome' | 'restore' | 'boot' | 'name' | 'path' | 'goal'>('welcome');
+  const [logLines, setLogLines] = useState<string[]>([]);
   const [name, setName] = useState('');
-  const [path, setPath] = useState < JobPath > ('Scholar');
+  const [path, setPath] = useState<JobPath>('Scholar');
   const [goalTitle, setGoalTitle] = useState('Master core subjects & exams');
   const [goalMinutes, setGoalMinutes] = useState(60);
   const [restoreError, setRestoreError] = useState('');
   const [restoreDone, setRestoreDone] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [showPaste, setShowPaste] = useState(false);
-  
+
   useEffect(() => {
     if (step !== 'boot') return;
     sound.playArise(soundEnabled);
@@ -32,7 +32,7 @@ export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled })
       'System linked. Operator authorized.',
       'Configuring study environment...'
     ];
-    
+
     let i = 0;
     const interval = setInterval(() => {
       if (i < lines.length) {
@@ -43,10 +43,10 @@ export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled })
         setTimeout(() => setStep('name'), 700);
       }
     }, 500);
-    
+
     return () => clearInterval(interval);
   }, [step, soundEnabled]);
-  
+
   const handleFinish = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
@@ -58,10 +58,10 @@ export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled })
     }
     onComplete(name.trim(), path, goalMinutes, goalTitle);
   };
-  
+
   const restoreFromContent = (content: string) => {
     setRestoreError('');
-    let parsed: { player ? : { name ? : string };quests ? : unknown } | null = null;
+    let parsed: { player?: { name?: string }; quests?: unknown } | null = null;
     try {
       parsed = JSON.parse(content.trim());
     } catch {
@@ -86,8 +86,8 @@ export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled })
       setRestoreError('Invalid backup data. Please use the backup you exported from Settings.');
     }
   };
-  
-  const handleRestoreFile = (e: React.ChangeEvent < HTMLInputElement > ) => {
+
+  const handleRestoreFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setRestoreError('');
@@ -97,7 +97,7 @@ export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled })
     reader.readAsText(file);
     e.target.value = '';
   };
-  
+
   return (
     <div className="fixed inset-0 z-50 bg-[#090d16] flex items-center justify-center p-4">
       <div className="w-full max-w-md pro-card p-8 space-y-6 relative overflow-hidden shadow-2xl border-slate-800">
@@ -137,7 +137,6 @@ export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled })
             <div className="text-xs text-slate-300 leading-relaxed">
               Choose the backup file (.json) you exported earlier from <span className="text-blue-400 font-semibold">Settings &rarr; Export Backup</span>. Your previous data will be restored automatically.
             </div>
-
             <label className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-lg text-xs uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer">
               <Upload className="w-4 h-4" /> Import Backup
               <input
@@ -146,7 +145,6 @@ export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled })
                 className="hidden"
               />
             </label>
-
             <button
               type="button"
               onClick={() => setShowPaste(!showPaste)}
@@ -154,7 +152,6 @@ export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled })
             >
               Can't select the file? Paste backup text instead
             </button>
-
             {showPaste && (
               <div className="space-y-2">
                 <textarea
@@ -174,7 +171,6 @@ export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled })
                 </button>
               </div>
             )}
-
             {restoreError && (
               <div className="text-xs text-red-400 bg-red-950/30 border border-red-900/50 rounded-lg p-3">{restoreError}</div>
             )}
@@ -183,7 +179,6 @@ export const BootOnboarding: React.FC < Props > = ({ onComplete, soundEnabled })
                 Data restored. Welcome back, Hunter...
               </div>
             )}
-
             <button
               type="button"
               onClick={() => setStep('welcome')}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppData, AppSettings } from '../../types';
-import { Settings, Volume2, VolumeX, Download, Upload, RefreshCw, Shield } from 'lucide-react';
+import { Volume2, VolumeX, Download, Upload } from 'lucide-react';
 import { exportBackup, importBackup } from '../../utils/storage';
 
 interface Props {
@@ -10,10 +10,10 @@ interface Props {
   onImportData: (data: AppData) => void;
 }
 
-export const SettingsScreen: React.FC < Props > = ({ data, onUpdateSettings, onResetData, onImportData }) => {
+export const SettingsScreen: React.FC<Props> = ({ data, onUpdateSettings, onResetData, onImportData }) => {
   const { settings } = data;
-  
-  const handleFileImport = (e: React.ChangeEvent < HTMLInputElement > ) => {
+
+  const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -30,7 +30,7 @@ export const SettingsScreen: React.FC < Props > = ({ data, onUpdateSettings, onR
     reader.readAsText(file);
     e.target.value = '';
   };
-  
+
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       <div className="pro-card p-6">
@@ -48,13 +48,13 @@ export const SettingsScreen: React.FC < Props > = ({ data, onUpdateSettings, onR
           <div className="flex gap-2">
             <button
               onClick={() => onUpdateSettings({ ...settings, language: 'en' })}
-              className={`px-4 py-2 rounded-lg border font-semibold ${settings.language === 'en' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-900 border-slate-800 text-slate-400'}`}
+              className={`px-4 py-2 rounded-lg border font-semibold cursor-pointer ${settings.language === 'en' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-900 border-slate-800 text-slate-400'}`}
             >
               English
             </button>
             <button
               onClick={() => onUpdateSettings({ ...settings, language: 'bn' })}
-              className={`px-4 py-2 rounded-lg border font-semibold ${settings.language === 'bn' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-900 border-slate-800 text-slate-400'}`}
+              className={`px-4 py-2 rounded-lg border font-semibold cursor-pointer ${settings.language === 'bn' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-900 border-slate-800 text-slate-400'}`}
             >
               বাংলা
             </button>
@@ -69,7 +69,7 @@ export const SettingsScreen: React.FC < Props > = ({ data, onUpdateSettings, onR
           </div>
           <button
             onClick={() => onUpdateSettings({ ...settings, soundEnabled: !settings.soundEnabled })}
-            className={`px-4 py-2 rounded-lg border font-semibold flex items-center gap-2 ${settings.soundEnabled ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-900 border-slate-800 text-slate-400'}`}
+            className={`px-4 py-2 rounded-lg border font-semibold flex items-center gap-2 cursor-pointer ${settings.soundEnabled ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-900 border-slate-800 text-slate-400'}`}
           >
             {settings.soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             {settings.soundEnabled ? 'Enabled' : 'Disabled'}
@@ -85,13 +85,12 @@ export const SettingsScreen: React.FC < Props > = ({ data, onUpdateSettings, onR
           <div className="flex gap-3">
             <button
               onClick={() => exportBackup(data)}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2 shadow"
+              className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2 shadow cursor-pointer"
             >
               <Download className="w-4 h-4" /> Export Backup
             </button>
             <label className="bg-slate-900 border border-slate-800 text-slate-300 hover:text-white font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2 cursor-pointer">
               <Upload className="w-4 h-4" /> Import Backup
-              {/* no accept= so Android file picker does not grey out .json */}
               <input type="file" onChange={handleFileImport} className="hidden" />
             </label>
           </div>
@@ -105,11 +104,11 @@ export const SettingsScreen: React.FC < Props > = ({ data, onUpdateSettings, onR
           </div>
           <button
             onClick={() => {
-              if (confirm('Are you sure you want to reset all data? This cannot be undone.')) {
+              if (window.confirm('Are you sure you want to reset all data? This cannot be undone.')) {
                 onResetData();
               }
             }}
-            className="bg-red-950/60 border border-red-500/40 text-red-300 hover:bg-red-900 font-semibold px-4 py-2.5 rounded-lg"
+            className="bg-red-950/60 border border-red-500/40 text-red-300 hover:bg-red-900 font-semibold px-4 py-2.5 rounded-lg cursor-pointer"
           >
             Reset Data
           </button>
@@ -118,7 +117,7 @@ export const SettingsScreen: React.FC < Props > = ({ data, onUpdateSettings, onR
 
       {/* Disclaimer */}
       <div className="pro-card p-6 text-center text-xs text-slate-400">
-        “Fan-inspired educational project. Not affiliated with Solo Leveling or its creators.”
+        Fan-inspired educational project. Not affiliated with Solo Leveling or its creators.
       </div>
     </div>
   );

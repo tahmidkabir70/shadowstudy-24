@@ -12,15 +12,15 @@ interface Props {
   onExtractShadow: (chapter: Chapter, subjectName: string) => void;
 }
 
-export const LearnScreen: React.FC < Props > = ({ data, onAddSubject, onAddChapter, onMarkLearned, onReviewChapter, onExtractShadow }) => {
-  const [selectedSubId, setSelectedSubId] = useState < string > (data.subjects[0]?.id || '');
-  const [newChapTitle, setNewChapTitle] = useState < string > ('');
-  const [newSubName, setNewSubName] = useState < string > ('');
-  const [showAddModal, setShowAddModal] = useState < boolean > (false);
-  const [showSubModal, setShowSubModal] = useState < boolean > (false);
-  
+export const LearnScreen: React.FC<Props> = ({ data, onAddSubject, onAddChapter, onMarkLearned, onReviewChapter, onExtractShadow }) => {
+  const [selectedSubId, setSelectedSubId] = useState<string>(data.subjects[0]?.id || '');
+  const [newChapTitle, setNewChapTitle] = useState<string>('');
+  const [newSubName, setNewSubName] = useState<string>('');
+  const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [showSubModal, setShowSubModal] = useState<boolean>(false);
+
   const activeSub = data.subjects.find((s) => s.id === selectedSubId) || data.subjects[0];
-  
+
   const handleAddChap = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newChapTitle.trim() || !activeSub) return;
@@ -28,7 +28,7 @@ export const LearnScreen: React.FC < Props > = ({ data, onAddSubject, onAddChapt
     setNewChapTitle('');
     setShowAddModal(false);
   };
-  
+
   const handleAddSub = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSubName.trim()) return;
@@ -37,7 +37,7 @@ export const LearnScreen: React.FC < Props > = ({ data, onAddSubject, onAddChapt
     setNewSubName('');
     setShowSubModal(false);
   };
-  
+
   const openAddChapter = () => {
     if (data.subjects.length === 0) {
       setShowSubModal(true);
@@ -45,9 +45,9 @@ export const LearnScreen: React.FC < Props > = ({ data, onAddSubject, onAddChapt
       setShowAddModal(true);
     }
   };
-  
+
   const todayStr = localDateStr();
-  
+
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       {/* Header */}
@@ -57,7 +57,6 @@ export const LearnScreen: React.FC < Props > = ({ data, onAddSubject, onAddChapt
           <h1 className="text-2xl font-bold font-mono text-white mt-1">Subjects & Spaced Revisions</h1>
           <p className="text-xs font-mono text-cyan-300 mt-0.5">Master chapters and unlock Shadow Army extractions.</p>
         </div>
-
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setShowSubModal(true)}
@@ -80,7 +79,7 @@ export const LearnScreen: React.FC < Props > = ({ data, onAddSubject, onAddChapt
           <BookOpen className="w-10 h-10 text-cyan-400 mx-auto" />
           <div className="text-white font-mono font-bold text-base">No subjects yet</div>
           <p className="text-xs font-mono text-cyan-300/80">
-            Add your first subject (for example Physics or Bangla) to start adding chapters.
+            Add your first subject (for example Physics or Mathematics) to start adding chapters.
           </p>
           <button
             onClick={() => setShowSubModal(true)}
@@ -98,7 +97,7 @@ export const LearnScreen: React.FC < Props > = ({ data, onAddSubject, onAddChapt
             <button
               key={sub.id}
               onClick={() => setSelectedSubId(sub.id)}
-              className={`px-5 py-3 rounded-xl font-mono text-xs uppercase font-bold whitespace-nowrap transition-all ${
+              className={`px-5 py-3 rounded-xl font-mono text-xs uppercase font-bold whitespace-nowrap transition-all cursor-pointer ${
                 activeSub && activeSub.id === sub.id
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.4)]'
                   : 'bg-slate-900 text-cyan-400 border border-cyan-500/30 hover:border-cyan-400'
@@ -114,16 +113,13 @@ export const LearnScreen: React.FC < Props > = ({ data, onAddSubject, onAddChapt
       {activeSub && (
         <div className="bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-6 shadow-lg space-y-4">
           <h2 className="text-sm font-mono text-cyan-400 tracking-wider mb-2">CHAPTERS IN {activeSub.name.toUpperCase()}</h2>
-
           {activeSub.chapters.length === 0 && (
             <div className="text-xs font-mono text-slate-400">No chapters yet. Tap "Add Chapter" to create the first one.</div>
           )}
-
           <div className="space-y-3">
             {activeSub.chapters.map((ch) => {
               const isDue = ch.learned && ch.nextRevisionDate && ch.nextRevisionDate <= todayStr;
               const canExtract = ch.learned && ch.revisionCount >= 2 && !ch.extractedToShadow;
-
               return (
                 <div
                   key={ch.id}
@@ -152,12 +148,11 @@ export const LearnScreen: React.FC < Props > = ({ data, onAddSubject, onAddChapt
                       Revisions: {ch.revisionCount} | Next Revision: {ch.nextRevisionDate || 'None'}
                     </div>
                   </div>
-
                   <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                     {!ch.learned ? (
                       <button
                         onClick={() => onMarkLearned(activeSub.id, ch.id)}
-                        className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs uppercase px-4 py-2 rounded-xl font-bold shadow"
+                        className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs uppercase px-4 py-2 rounded-xl font-bold shadow cursor-pointer"
                       >
                         Mark Learned
                       </button>
@@ -166,31 +161,30 @@ export const LearnScreen: React.FC < Props > = ({ data, onAddSubject, onAddChapt
                         <div className="flex bg-slate-900 border border-cyan-500/30 rounded-xl overflow-hidden font-mono text-xs">
                           <button
                             onClick={() => onReviewChapter(activeSub.id, ch.id, 'hard')}
-                            className="px-3 py-2 text-yellow-400 hover:bg-yellow-950/50 border-r border-cyan-500/20"
+                            className="px-3 py-2 text-yellow-400 hover:bg-yellow-950/50 border-r border-cyan-500/20 cursor-pointer"
                             title="Hard (1d interval)"
                           >
                             Hard
                           </button>
                           <button
                             onClick={() => onReviewChapter(activeSub.id, ch.id, 'good')}
-                            className="px-3 py-2 text-cyan-300 hover:bg-cyan-950/50 border-r border-cyan-500/20"
+                            className="px-3 py-2 text-cyan-300 hover:bg-cyan-950/50 border-r border-cyan-500/20 cursor-pointer"
                             title="Good (3d interval)"
                           >
                             Good
                           </button>
                           <button
                             onClick={() => onReviewChapter(activeSub.id, ch.id, 'easy')}
-                            className="px-3 py-2 text-emerald-400 hover:bg-emerald-950/50"
+                            className="px-3 py-2 text-emerald-400 hover:bg-emerald-950/50 cursor-pointer"
                             title="Easy (7d interval)"
                           >
                             Easy
                           </button>
                         </div>
-
                         {canExtract && (
                           <button
                             onClick={() => onExtractShadow(ch, activeSub.name)}
-                            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-mono text-xs uppercase px-4 py-2 rounded-xl font-bold shadow-[0_0_15px_rgba(168,85,247,0.5)] flex items-center gap-1.5 animate-pulse"
+                            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-mono text-xs uppercase px-4 py-2 rounded-xl font-bold shadow-[0_0_15px_rgba(168,85,247,0.5)] flex items-center gap-1.5 animate-pulse cursor-pointer"
                           >
                             <Ghost className="w-4 h-4" /> ARISE
                           </button>
@@ -226,13 +220,13 @@ export const LearnScreen: React.FC < Props > = ({ data, onAddSubject, onAddChapt
                 <button
                   type="button"
                   onClick={() => setShowSubModal(false)}
-                  className="px-4 py-2 rounded-xl border border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/50"
+                  className="px-4 py-2 rounded-xl border border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow"
+                  className="px-6 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow cursor-pointer"
                 >
                   Create Subject
                 </button>
@@ -266,13 +260,13 @@ export const LearnScreen: React.FC < Props > = ({ data, onAddSubject, onAddChapt
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl border border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/50"
+                  className="px-4 py-2 rounded-xl border border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow"
+                  className="px-6 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow cursor-pointer"
                 >
                   Create Chapter
                 </button>

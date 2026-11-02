@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppData, Quest, QuestDifficulty, QuestType } from '../../types';
-import { CheckCircle, Plus, Trash2, Filter, Award, Sparkles } from 'lucide-react';
+import { CheckCircle, Plus, Trash2 } from 'lucide-react';
 
 interface Props {
   data: AppData;
@@ -27,7 +27,6 @@ export const QuestsScreen: React.FC<Props> = ({ data, onCompleteQuest, onAddQues
     if (!newTitle.trim()) return;
     const xpReward = newDiff === 'easy' ? 10 : newDiff === 'medium' ? 25 : 50;
     const goldReward = newDiff === 'easy' ? 5 : newDiff === 'medium' ? 12 : 25;
-
     const newQuest: Quest = {
       id: `custom_${Date.now()}`,
       title: newTitle,
@@ -38,7 +37,6 @@ export const QuestsScreen: React.FC<Props> = ({ data, onCompleteQuest, onAddQues
       goldReward,
       completed: false,
     };
-
     onAddQuest(newQuest);
     setNewTitle('');
     setNewDesc('');
@@ -54,14 +52,13 @@ export const QuestsScreen: React.FC<Props> = ({ data, onCompleteQuest, onAddQues
           <h1 className="text-2xl font-bold font-mono text-white mt-1">Quests & Missions</h1>
           <p className="text-xs font-mono text-cyan-300 mt-0.5">Complete quests to gain XP, Gold, and level up.</p>
         </div>
-
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="flex bg-slate-950 p-1 rounded-xl border border-cyan-500/30 font-mono text-xs">
             {(['all', 'daily', 'main', 'side'] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-lg uppercase transition-all ${
+                className={`px-3 py-1.5 rounded-lg uppercase transition-all cursor-pointer ${
                   filter === f ? 'bg-cyan-500 text-slate-950 font-bold shadow' : 'text-cyan-400 hover:text-white'
                 }`}
               >
@@ -69,7 +66,6 @@ export const QuestsScreen: React.FC<Props> = ({ data, onCompleteQuest, onAddQues
               </button>
             ))}
           </div>
-
           <button
             onClick={() => setShowAddModal(true)}
             className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs uppercase px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all cursor-pointer"
@@ -92,7 +88,7 @@ export const QuestsScreen: React.FC<Props> = ({ data, onCompleteQuest, onAddQues
               <button
                 onClick={() => !quest.completed && onCompleteQuest(quest.id)}
                 disabled={quest.completed}
-                className={`w-7 h-7 rounded-xl border flex items-center justify-center transition-all mt-0.5 ${
+                className={`w-7 h-7 rounded-xl border flex items-center justify-center transition-all mt-0.5 cursor-pointer ${
                   quest.completed ? 'bg-cyan-500 border-cyan-400 text-slate-950' : 'border-cyan-500/50 hover:border-cyan-400 bg-slate-950'
                 }`}
               >
@@ -117,7 +113,6 @@ export const QuestsScreen: React.FC<Props> = ({ data, onCompleteQuest, onAddQues
                 <div className="text-xs text-cyan-400/80 font-mono mt-0.5">{quest.description}</div>
               </div>
             </div>
-
             <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
               <div className="flex items-center gap-2 font-mono text-xs">
                 <span className="text-cyan-300 bg-cyan-950/80 px-2.5 py-1 rounded border border-cyan-500/30">+{quest.xpReward} XP</span>
@@ -125,7 +120,7 @@ export const QuestsScreen: React.FC<Props> = ({ data, onCompleteQuest, onAddQues
               </div>
               <button
                 onClick={() => onDeleteQuest(quest.id)}
-                className="text-slate-500 hover:text-red-400 p-2 rounded-lg transition-colors"
+                className="text-slate-500 hover:text-red-400 p-2 rounded-lg transition-colors cursor-pointer"
                 title="Delete Quest"
               >
                 <Trash2 className="w-4 h-4" />
@@ -191,13 +186,13 @@ export const QuestsScreen: React.FC<Props> = ({ data, onCompleteQuest, onAddQues
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl border border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/50"
+                  className="px-4 py-2 rounded-xl border border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow"
+                  className="px-6 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow cursor-pointer"
                 >
                   Accept Quest
                 </button>

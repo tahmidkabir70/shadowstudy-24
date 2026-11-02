@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppData, Gate, GateRank, GateStep } from '../../types';
-import { Shield, CheckCircle, Plus, AlertTriangle, Sparkles, X } from 'lucide-react';
+import { Shield, CheckCircle, Plus, AlertTriangle, X } from 'lucide-react';
 
 interface Props {
   data: AppData;
@@ -22,7 +22,6 @@ export const GatesScreen: React.FC<Props> = ({ data, onAddGate, onToggleGateStep
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !bossTask.trim()) return;
-
     const steps: GateStep[] = [];
     if (stepText1.trim()) steps.push({ id: `gs_${Date.now()}_1`, text: stepText1.trim(), completed: false });
     if (stepText2.trim()) steps.push({ id: `gs_${Date.now()}_2`, text: stepText2.trim(), completed: false });
@@ -43,7 +42,6 @@ export const GatesScreen: React.FC<Props> = ({ data, onAddGate, onToggleGateStep
       rewardGold,
       cleared: false,
     };
-
     onAddGate(newGate);
     setTitle('');
     setDesc('');
@@ -61,7 +59,6 @@ export const GatesScreen: React.FC<Props> = ({ data, onAddGate, onToggleGateStep
           <h1 className="text-2xl font-bold text-white mt-1">Dungeon Gates & Boss Challenges</h1>
           <p className="text-xs text-slate-400 mt-0.5">Conquer major study milestones structured as Dungeon Gates.</p>
         </div>
-
         <button
           onClick={() => setShowAddModal(true)}
           className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold uppercase tracking-wider flex items-center gap-2 shadow transition-all cursor-pointer"
@@ -81,7 +78,6 @@ export const GatesScreen: React.FC<Props> = ({ data, onAddGate, onToggleGateStep
         ) : (
           data.gates.map((gate) => {
             const allStepsDone = gate.steps.every((s) => s.completed);
-
             return (
               <div
                 key={gate.id}
@@ -104,7 +100,6 @@ export const GatesScreen: React.FC<Props> = ({ data, onAddGate, onToggleGateStep
                     <h3 className="text-lg font-bold text-white">{gate.title}</h3>
                     <p className="text-xs text-slate-400 mt-0.5">{gate.description}</p>
                   </div>
-
                   <div className="flex items-center gap-3 text-xs font-mono">
                     <span className="text-blue-400 bg-blue-950/40 px-3 py-1.5 rounded-lg border border-blue-500/20">+{gate.rewardXp} XP</span>
                     <span className="text-amber-400 bg-amber-950/40 px-3 py-1.5 rounded-lg border border-amber-500/20">+{gate.rewardGold} Credits</span>
@@ -140,7 +135,6 @@ export const GatesScreen: React.FC<Props> = ({ data, onAddGate, onToggleGateStep
                     </div>
                     <div className="text-sm font-semibold text-white">{gate.bossTask}</div>
                   </div>
-
                   {!gate.cleared && (
                     <button
                       onClick={() => {
@@ -170,7 +164,7 @@ export const GatesScreen: React.FC<Props> = ({ data, onAddGate, onToggleGateStep
           <div className="w-full max-w-md pro-card p-6 border-slate-700">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-sm font-bold text-white uppercase tracking-wider">Create Dungeon Gate</h2>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -196,22 +190,20 @@ export const GatesScreen: React.FC<Props> = ({ data, onAddGate, onToggleGateStep
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-slate-300 block mb-1 uppercase tracking-wider">Rank</label>
-                  <select
-                    value={rank}
-                    onChange={(e) => setRank(e.target.value as GateRank)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-white focus:outline-none focus:border-blue-500"
-                  >
-                    <option value="E">Rank E</option>
-                    <option value="D">Rank D</option>
-                    <option value="C">Rank C</option>
-                    <option value="B">Rank B</option>
-                    <option value="A">Rank A</option>
-                    <option value="S">Rank S</option>
-                  </select>
-                </div>
+              <div>
+                <label className="text-slate-300 block mb-1 uppercase tracking-wider">Rank</label>
+                <select
+                  value={rank}
+                  onChange={(e) => setRank(e.target.value as GateRank)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="E">Rank E</option>
+                  <option value="D">Rank D</option>
+                  <option value="C">Rank C</option>
+                  <option value="B">Rank B</option>
+                  <option value="A">Rank A</option>
+                  <option value="S">Rank S</option>
+                </select>
               </div>
               <div>
                 <label className="text-slate-300 block mb-1 uppercase tracking-wider">Gate Step 1</label>
@@ -248,13 +240,13 @@ export const GatesScreen: React.FC<Props> = ({ data, onAddGate, onToggleGateStep
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2.5 rounded-lg border border-slate-800 text-slate-300 hover:bg-slate-900"
+                  className="px-4 py-2.5 rounded-lg border border-slate-800 text-slate-300 hover:bg-slate-900 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow"
+                  className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow cursor-pointer"
                 >
                   Open Gate
                 </button>

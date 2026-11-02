@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Player } from '../types';
 import { calculateXpForNextLevel } from '../utils/gameLogic';
-import { Sparkles, Shield, Zap, Award, Flame, X } from 'lucide-react';
+import { Sparkles, Flame, X } from 'lucide-react';
 import { sound } from '../utils/sound';
 
 interface Props {
@@ -40,12 +40,12 @@ export const StatusWindowModal: React.FC<Props> = ({ player, soundEnabled, onClo
   const energyPercent = Math.min(100, Math.round((player.todayStudyMinutes / Math.max(1, player.dailyGoalMinutes)) * 100));
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fadeIn"
       onClick={onClose}
     >
-      <div 
-        className="relative w-full max-w-2xl bg-[#0d1322] border-2 border-cyan-500/60 rounded-xl p-6 shadow-[0_0_30px_rgba(6,182,212,0.3)] text-cyan-100 overflow-hidden animate-scaleUp"
+      <div
+        className="relative w-full max-w-2xl bg-[#0a1128] border-2 border-cyan-400/80 rounded-xl p-6 shadow-[0_0_40px_rgba(0,229,255,0.35)] text-cyan-100 overflow-hidden animate-scaleUp system-card"
         onClick={(e) => e.stopPropagation()}
       >
         {/* System Corner Brackets */}
@@ -61,7 +61,7 @@ export const StatusWindowModal: React.FC<Props> = ({ player, soundEnabled, onClo
           </div>
           <div className="flex items-center space-x-3">
             <span className="text-xs font-mono text-cyan-300 animate-pulse">Auto-closing in {timeLeft}s</span>
-            <button 
+            <button
               onClick={onClose}
               className="text-cyan-400 hover:text-white bg-cyan-950/50 hover:bg-cyan-900 p-1.5 rounded-lg border border-cyan-500/30 transition-colors"
             >
@@ -105,13 +105,12 @@ export const StatusWindowModal: React.FC<Props> = ({ player, soundEnabled, onClo
               <span>{energyPercent}%</span>
             </div>
             <div className="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden border border-cyan-500/30">
-              <div 
+              <div
                 className="bg-gradient-to-r from-cyan-600 to-cyan-400 h-full transition-all duration-500 shadow-[0_0_10px_rgba(6,182,212,0.8)]"
                 style={{ width: `${energyPercent}%` }}
               ></div>
             </div>
           </div>
-
           <div className="grid grid-cols-2 gap-4 pt-2 text-xs font-mono">
             <div className="flex items-center justify-between bg-cyan-950/40 p-2 rounded border border-cyan-500/20">
               <span className="text-cyan-400">Revisions Done:</span>

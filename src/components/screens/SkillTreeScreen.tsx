@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppData } from '../../types';
-import { Zap, Lock, CheckCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 
 interface Props {
   data: AppData;
@@ -39,7 +39,7 @@ export const SkillTreeScreen: React.FC<Props> = ({ data, onUnlockSkill }) => {
                 <button
                   onClick={() => onUnlockSkill(skill.id)}
                   disabled={player.growthPoints < skill.costPoints}
-                  className={`px-4 py-2 rounded-xl font-mono text-xs font-bold uppercase transition-all ${
+                  className={`px-4 py-2 rounded-xl font-mono text-xs font-bold uppercase transition-all cursor-pointer ${
                     player.growthPoints >= skill.costPoints ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow' : 'bg-slate-800 text-slate-500 cursor-not-allowed'
                   }`}
                 >

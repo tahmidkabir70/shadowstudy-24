@@ -1,6 +1,5 @@
 import React from 'react';
 import { AppData } from '../../types';
-import { Shield, Sparkles } from 'lucide-react';
 
 interface Props {
   data: AppData;
@@ -24,7 +23,6 @@ export const SeasonScreen: React.FC<Props> = ({ data }) => {
             const weekNum = i + 1;
             const isCurrent = weekNum === season.currentWeek;
             const isPassed = weekNum < season.currentWeek;
-
             return (
               <div
                 key={weekNum}

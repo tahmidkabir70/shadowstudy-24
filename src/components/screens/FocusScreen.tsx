@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AppData } from '../../types';
-import { Play, Pause, RotateCcw, Clock, Sparkles } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import { sound } from '../../utils/sound';
 
 interface Props {
@@ -51,8 +51,8 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
 
   const [selectedSubject, setSelectedSubject] = useState<string>(data.subjects[0]?.name || 'General');
   const [isBreak, setIsBreak] = useState<boolean>(false);
+  const [soundscape, setSoundscape] = useState<'silence' | 'dungeon' | 'cyberpunk' | 'rain'>('silence');
 
-  // Save timer state to localStorage whenever running state changes
   useEffect(() => {
     if (isRunning) {
       const endTimestamp = Date.now() + timeLeft * 1000;
@@ -105,28 +105,28 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn pb-12">
-      <div className="pro-card p-6 text-center">
-        <div className="text-[11px] font-semibold text-slate-400 tracking-wider uppercase">FOCUS SYSTEM GATE</div>
-        <h1 className="text-2xl font-bold text-white mt-1">
+      <div className="system-card p-6 text-center">
+        <div className="text-[11px] font-semibold text-cyan-400 tracking-wider uppercase font-mono">[ FOCUS SYSTEM GATE ]</div>
+        <h1 className="text-2xl font-bold text-white mt-1 font-mono">
           {isBreak ? 'SYSTEM REST / BREAK' : 'FOCUS & STUDY SESSION'}
         </h1>
-        <p className="text-xs text-slate-400 mt-0.5">
+        <p className="text-xs text-cyan-300/80 mt-0.5 font-mono">
           {isBreak ? 'Relax your mind before the next gate.' : 'Immerse in focused study to earn XP and attributes.'}
         </p>
       </div>
 
-      <div className="pro-card p-8 text-center relative overflow-hidden">
+      <div className="system-card p-8 text-center relative overflow-hidden">
         {!isBreak && (
-          <div className="flex justify-center gap-2 mb-8">
+          <div className="flex justify-center gap-2 mb-6">
             {[15, 25, 45, 60].map((mins) => (
               <button
                 key={mins}
                 onClick={() => setTimerPreset(mins)}
                 disabled={isRunning}
-                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-4 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
                   durationMins === mins && !isBreak
-                    ? 'bg-blue-600 text-white shadow'
-                    : 'bg-slate-900 text-slate-300 border border-slate-800 hover:border-slate-700'
+                    ? 'bg-cyan-500 text-slate-950 shadow'
+                    : 'bg-slate-900 text-cyan-400 border border-cyan-500/30 hover:border-cyan-400'
                 }`}
               >
                 {mins} Mins
@@ -135,23 +135,41 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
           </div>
         )}
 
-        <div className="my-8">
-          <div className="text-6xl md:text-7xl font-black font-mono tracking-wider text-white">
+        {/* Ambient Soundscape Selector */}
+        <div className="flex items-center justify-center gap-3 mb-6 font-mono text-xs">
+          <span className="text-cyan-400 flex items-center gap-1">
+            <Volume2 className="w-4 h-4" /> Soundscape:
+          </span>
+          {(['silence', 'dungeon', 'cyberpunk', 'rain'] as const).map((sc) => (
+            <button
+              key={sc}
+              onClick={() => setSoundscape(sc)}
+              className={`px-3 py-1.5 rounded-lg border uppercase transition-all cursor-pointer ${
+                soundscape === sc ? 'bg-cyan-600 border-cyan-400 text-white font-bold' : 'bg-slate-950 border-cyan-500/20 text-cyan-400/70 hover:text-white'
+              }`}
+            >
+              {sc}
+            </button>
+          ))}
+        </div>
+
+        <div className="my-6">
+          <div className="text-6xl md:text-7xl font-black font-mono tracking-wider text-white drop-shadow-[0_0_20px_rgba(0,229,255,0.4)]">
             {formatTime(timeLeft)}
           </div>
-          <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800 mt-6 max-w-md mx-auto">
-            <div className="bg-blue-600 h-full transition-all duration-1000" style={{ width: `${progressPercent}%` }}></div>
+          <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-cyan-500/30 mt-6 max-w-md mx-auto">
+            <div className="bg-gradient-to-r from-cyan-500 to-blue-600 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(0,229,255,0.8)]" style={{ width: `${progressPercent}%` }}></div>
           </div>
         </div>
 
         {!isBreak && (
-          <div className="max-w-xs mx-auto mb-8 text-xs font-medium">
-            <label className="text-slate-400 block mb-2 uppercase tracking-wider">Target Subject</label>
+          <div className="max-w-xs mx-auto mb-8 text-xs font-mono">
+            <label className="text-cyan-400 block mb-2 uppercase tracking-wider">Target Subject</label>
             <select
               value={selectedSubject}
               onChange={(e) => setSelectedSubject(e.target.value)}
               disabled={isRunning}
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500"
+              className="w-full bg-slate-950 border border-cyan-500/40 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-cyan-400"
             >
               {data.subjects.map((s) => (
                 <option key={s.id} value={s.name}>{s.name}</option>
@@ -164,8 +182,8 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
         <div className="flex items-center justify-center gap-4">
           <button
             onClick={() => setIsRunning(!isRunning)}
-            className={`px-8 py-3 rounded-lg text-xs uppercase font-bold flex items-center gap-2 shadow transition-all ${
-              isRunning ? 'bg-amber-600 hover:bg-amber-500 text-white' : 'bg-blue-600 hover:bg-blue-500 text-white'
+            className={`px-8 py-3 rounded-xl text-xs uppercase font-mono font-bold flex items-center gap-2 shadow transition-all cursor-pointer ${
+              isRunning ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.5)]' : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_20px_rgba(0,229,255,0.5)]'
             }`}
           >
             {isRunning ? <><Pause className="w-4 h-4" /> Pause Gate</> : <><Play className="w-4 h-4" /> Begin Focus</>}
@@ -177,7 +195,7 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
               setIsBreak(false);
               localStorage.removeItem(TIMER_STORAGE_KEY);
             }}
-            className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-slate-300 hover:text-white transition-colors"
+            className="p-3 bg-slate-900 border border-cyan-500/30 rounded-xl text-cyan-300 hover:text-white transition-colors cursor-pointer"
             title="Reset Timer"
           >
             <RotateCcw className="w-4 h-4" />

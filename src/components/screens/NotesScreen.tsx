@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AppData, NoteItem } from '../../types';
 import { localDateStr } from '../../utils/date';
-import { FileText, Plus, Pin, Trash2, Search } from 'lucide-react';
+import { Plus, Pin, Trash2, Search } from 'lucide-react';
 
 interface Props {
   data: AppData;
@@ -10,13 +10,13 @@ interface Props {
   onDeleteNote: (id: string) => void;
 }
 
-export const NotesScreen: React.FC < Props > = ({ data, onAddNote, onTogglePin, onDeleteNote }) => {
+export const NotesScreen: React.FC<Props> = ({ data, onAddNote, onTogglePin, onDeleteNote }) => {
   const [search, setSearch] = useState('');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [subject, setSubject] = useState('General');
   const [showModal, setShowModal] = useState(false);
-  
+
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -32,9 +32,9 @@ export const NotesScreen: React.FC < Props > = ({ data, onAddNote, onTogglePin, 
     setContent('');
     setShowModal(false);
   };
-  
+
   const filtered = data.notes.filter((n) => n.title.toLowerCase().includes(search.toLowerCase()) || n.content.toLowerCase().includes(search.toLowerCase()));
-  
+
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-6">
@@ -55,7 +55,7 @@ export const NotesScreen: React.FC < Props > = ({ data, onAddNote, onTogglePin, 
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs uppercase px-4 py-2.5 rounded-xl font-bold flex items-center gap-2"
+            className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs uppercase px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" /> New Note
           </button>
@@ -68,7 +68,7 @@ export const NotesScreen: React.FC < Props > = ({ data, onAddNote, onTogglePin, 
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40">{note.subject}</span>
-                <button onClick={() => onTogglePin(note.id)} className={`p-1.5 rounded-lg ${note.pinned ? 'text-yellow-400' : 'text-slate-500 hover:text-white'}`}>
+                <button onClick={() => onTogglePin(note.id)} className={`p-1.5 rounded-lg cursor-pointer ${note.pinned ? 'text-yellow-400' : 'text-slate-500 hover:text-white'}`}>
                   <Pin className="w-4 h-4" />
                 </button>
               </div>
@@ -77,7 +77,7 @@ export const NotesScreen: React.FC < Props > = ({ data, onAddNote, onTogglePin, 
             </div>
             <div className="flex justify-between items-center mt-4 pt-4 border-t border-cyan-500/20 text-[10px] font-mono text-slate-500">
               <span>{note.updatedAt}</span>
-              <button onClick={() => onDeleteNote(note.id)} className="hover:text-red-400">
+              <button onClick={() => onDeleteNote(note.id)} className="hover:text-red-400 cursor-pointer">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -112,8 +112,8 @@ export const NotesScreen: React.FC < Props > = ({ data, onAddNote, onTogglePin, 
                 className="w-full bg-slate-950 border border-cyan-500/40 rounded-xl px-3 py-2 text-white h-32 resize-none"
               />
               <div className="flex justify-end gap-3">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded-xl border border-cyan-500/30 text-cyan-400">Cancel</button>
-                <button type="submit" className="px-6 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold">Save Note</button>
+                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded-xl border border-cyan-500/30 text-cyan-400 cursor-pointer">Cancel</button>
+                <button type="submit" className="px-6 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold cursor-pointer">Save Note</button>
               </div>
             </form>
           </div>

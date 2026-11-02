@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppData, PlannerItem } from '../../types';
-import { Calendar, Plus, CheckCircle, Trash2 } from 'lucide-react';
+import { CheckCircle, Trash2 } from 'lucide-react';
 
 interface Props {
   data: AppData;
@@ -47,7 +47,7 @@ export const PlannerScreen: React.FC<Props> = ({ data, onAddPlanner, onTogglePla
           <button
             key={day}
             onClick={() => setSelectedDay(day)}
-            className={`px-5 py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all ${
+            className={`px-5 py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all cursor-pointer ${
               selectedDay === day ? 'bg-cyan-500 text-slate-950 shadow' : 'bg-slate-900 text-cyan-400 border border-cyan-500/30'
             }`}
           >
@@ -83,7 +83,7 @@ export const PlannerScreen: React.FC<Props> = ({ data, onAddPlanner, onTogglePla
             className="bg-slate-950 border border-cyan-500/40 rounded-xl px-3 py-2.5 text-white md:col-span-2"
             required
           />
-          <button type="submit" className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl md:col-span-4">
+          <button type="submit" className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl md:col-span-4 cursor-pointer">
             Add to Agenda
           </button>
         </form>
@@ -96,18 +96,18 @@ export const PlannerScreen: React.FC<Props> = ({ data, onAddPlanner, onTogglePla
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => onTogglePlanner(item.id)}
-                className={`w-6 h-6 rounded-lg border flex items-center justify-center ${
+                className={`w-6 h-6 rounded-lg border flex items-center justify-center cursor-pointer ${
                   item.completed ? 'bg-cyan-500 border-cyan-400 text-slate-950' : 'border-cyan-500/50 bg-slate-950'
                 }`}
               >
                 {item.completed && <CheckCircle className="w-4 h-4" />}
               </button>
               <div>
-                <div className="text-xs text-cyan-400">{item.time} • {item.subject}</div>
+                <div className="text-xs text-cyan-400">{item.time} | {item.subject}</div>
                 <div className={`text-sm font-bold ${item.completed ? 'line-through text-cyan-600' : 'text-white'}`}>{item.task}</div>
               </div>
             </div>
-            <button onClick={() => onDeletePlanner(item.id)} className="text-slate-500 hover:text-red-400">
+            <button onClick={() => onDeletePlanner(item.id)} className="text-slate-500 hover:text-red-400 cursor-pointer">
               <Trash2 className="w-4 h-4" />
             </button>
           </div>

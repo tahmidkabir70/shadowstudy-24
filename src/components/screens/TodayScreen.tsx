@@ -1,8 +1,8 @@
 import React from 'react';
-import { AppData, Quest } from '../../types';
+import { AppData } from '../../types';
 import { calculateXpForNextLevel } from '../../utils/gameLogic';
 import { localDateStr } from '../../utils/date';
-import { Flame, CheckCircle, Target, Sparkles, ArrowRight, Shield, Clock } from 'lucide-react';
+import { Flame, CheckCircle, Target, Sparkles, ArrowRight } from 'lucide-react';
 
 interface Props {
   data: AppData;
@@ -11,15 +11,14 @@ interface Props {
   onOpenStatus: () => void;
 }
 
-export const TodayScreen: React.FC < Props > = ({ data, onNavigate, onCompleteQuest, onOpenStatus }) => {
+export const TodayScreen: React.FC<Props> = ({ data, onNavigate, onCompleteQuest, onOpenStatus }) => {
   const { player, quests, subjects, shadows } = data;
   const reqXp = calculateXpForNextLevel(player.level);
   const xpPercent = Math.min(100, Math.round((player.xp / reqXp) * 100));
   const studyPercent = Math.min(100, Math.round((player.todayStudyMinutes / Math.max(1, player.dailyGoalMinutes)) * 100));
-  
   const pendingQuests = quests.filter((q) => !q.completed);
   const totalShadowPower = shadows.reduce((acc, s) => acc + (s.isDormant ? Math.round(s.power / 2) : s.power), 0);
-  
+
   let dueRevisionsCount = 0;
   const todayStr = localDateStr();
   subjects.forEach((sub) => {
@@ -29,11 +28,11 @@ export const TodayScreen: React.FC < Props > = ({ data, onNavigate, onCompleteQu
       }
     });
   });
-  
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Player Header Card */}
-      <div 
+      <div
         onClick={onOpenStatus}
         className="pro-card p-6 cursor-pointer hover:border-blue-500/40 transition-all group"
       >
@@ -45,10 +44,9 @@ export const TodayScreen: React.FC < Props > = ({ data, onNavigate, onCompleteQu
             <div>
               <div className="text-[11px] font-medium tracking-wider text-slate-400 uppercase">OPERATOR PROFILE</div>
               <h1 className="text-xl font-bold text-white tracking-wide">{player.name}</h1>
-              <p className="text-xs font-medium text-indigo-400 mt-0.5">{player.title} — Level {player.level}</p>
+              <p className="text-xs font-medium text-indigo-400 mt-0.5">{player.title} | Level {player.level}</p>
             </div>
           </div>
-
           <div className="flex items-center gap-3">
             <div className="bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2 text-center">
               <div className="text-[10px] text-slate-400 font-medium">STREAK</div>
@@ -89,21 +87,20 @@ export const TodayScreen: React.FC < Props > = ({ data, onNavigate, onCompleteQu
           </div>
           <button
             onClick={() => onNavigate('focus')}
-            className="px-4 py-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all"
+            className="px-4 py-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer"
           >
             Launch Timer
           </button>
         </div>
-
         <div className="pro-card p-5 flex items-center justify-between">
           <div>
             <div className="text-[11px] text-slate-400 font-medium tracking-wider mb-1">PENDING REVISIONS</div>
             <div className="text-2xl font-bold text-indigo-400">{dueRevisionsCount} Modules</div>
-            <div className="text-[11px] text-slate-400 mt-1">Memory retention active</div>
+            <div className="text-[11px] text-slate-400 mt-1">Shadow Army PW: {totalShadowPower}</div>
           </div>
           <button
             onClick={() => onNavigate('learn')}
-            className="px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all"
+            className="px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer"
           >
             Review
           </button>
@@ -116,17 +113,16 @@ export const TodayScreen: React.FC < Props > = ({ data, onNavigate, onCompleteQu
           <h2 className="text-xs font-semibold text-slate-300 tracking-wider uppercase flex items-center gap-2">
             <Target className="w-4 h-4 text-blue-400" /> Active Quests ({pendingQuests.length} Remaining)
           </h2>
-          <button 
+          <button
             onClick={() => onNavigate('quests')}
-            className="text-xs font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1"
+            className="text-xs font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer"
           >
             View All <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
-
         <div className="space-y-2.5">
           {quests.slice(0, 3).map((quest) => (
-            <div 
+            <div
               key={quest.id}
               className={`p-3.5 border transition-all flex items-center justify-between rounded-lg ${
                 quest.completed ? 'bg-slate-950/40 border-slate-900 opacity-50' : 'bg-slate-900 border-slate-800 hover:border-slate-700'
@@ -136,7 +132,7 @@ export const TodayScreen: React.FC < Props > = ({ data, onNavigate, onCompleteQu
                 <button
                   onClick={() => !quest.completed && onCompleteQuest(quest.id)}
                   disabled={quest.completed}
-                  className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all mt-0.5 ${
+                  className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all mt-0.5 cursor-pointer ${
                     quest.completed ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-700 bg-slate-950 hover:border-blue-500'
                   }`}
                 >
@@ -149,7 +145,6 @@ export const TodayScreen: React.FC < Props > = ({ data, onNavigate, onCompleteQu
                   <div className="text-xs text-slate-400 mt-0.5">{quest.description}</div>
                 </div>
               </div>
-
               <div className="text-xs font-medium text-amber-400 bg-amber-950/30 px-2.5 py-1 rounded-md border border-amber-500/20">
                 +{quest.xpReward} XP
               </div>

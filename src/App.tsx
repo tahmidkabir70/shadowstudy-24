@@ -1,8 +1,14 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React, { useState, useEffect } from 'react';
-import { AppData, AppSettings, Chapter, Gate, JobPath, NoteItem, PlannerItem, Player, Quest, ShopItem, Subject } from './types';
+import { AppData, AppSettings, Chapter, Gate, JobPath, NoteItem, PlannerItem, Player, Quest, Shadow, ShopItem, Subject } from './types';
 import { loadAppData, saveAppData } from './utils/storage';
-import { addXpAndGold, getNextRevisionDays } from './utils/gameLogic';
-import { localDateStr, daysBetween, addDays } from './utils/data';
+import { addXpAndGold, getNextRevisionDays, calculateRank } from './utils/gameLogic';
+import { localDateStr, daysBetween, addDays } from './utils/date';
+import { sound } from './utils/sound';
 import { t } from './utils/i18n';
 import { StatusWindowModal } from './components/StatusWindowModal';
 import { AriseModal } from './components/AriseModal';
@@ -21,13 +27,13 @@ import { SkillTreeScreen } from './components/screens/SkillTreeScreen';
 import { ShopScreen } from './components/screens/ShopScreen';
 import { SeasonScreen } from './components/screens/SeasonScreen';
 import { SettingsScreen } from './components/screens/SettingsScreen';
+import { AchievementsScreen } from './components/screens/AchievementsScreen';
 import {
   Home, Target, Clock, BookOpen, Ghost, Shield, User,
-  Calendar, FileText, BarChart2, Zap, ShoppingBag, Award, Settings as SettingsIcon, Menu, X, Sparkles
+  Calendar, FileText, BarChart2, Zap, ShoppingBag, Award, Trophy, Settings as SettingsIcon, Menu, X
 } from 'lucide-react';
 
 // Streak: +1 once per local day, on the first XP-earning study action.
-// Returns the updated data and the new streak number to announce (0 = no toast).
 function applyStudyStreak(data: AppData, today: string): { data: AppData; toastStreak: number } {
   const p = data.player;
   if (p.lastStudyDate === today) return { data, toastStreak: 0 };
@@ -51,18 +57,15 @@ export default function App() {
   const [showStatusPopup, setShowStatusPopup] = useState<boolean>(false);
   const [ariseData, setAriseData] = useState<{ shadowName: string; subjectName: string; grade: string; power: number } | null>(null);
   const [doubleDungeonTitle, setDoubleDungeonTitle] = useState<string | null>(null);
+  const [levelUpData, setLevelUpData] = useState<{ oldLevel: number; newLevel: number; rank: string } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   const lang = data.settings.language;
-  // Welcome flag: only used as a silent marker. The real signal for onboarding
-  // is "does the player have a valid name?".
+
   const isWelcomeDone = typeof localStorage !== 'undefined' && localStorage.getItem('SHADOW_STUDY_WELCOME_DONE') === '1';
   const hasValidName = Boolean(data.player.name && data.player.name !== 'Player');
 
-  // If user already has a valid name but the flag is missing (legacy user from
-  // before this update), silently mark them as welcome-done so they do NOT see
-  // the New/Old Hunter screen again.
   useEffect(() => {
     if (hasValidName && !isWelcomeDone) {
       try {
@@ -73,43 +76,39 @@ export default function App() {
     }
   }, [hasValidName, isWelcomeDone]);
 
-  // Onboarding is now shown ONLY when the user has no valid name.
-  // After Reset Data the name is empty, so the screen appears again — correct.
   const isOnboarding = !hasValidName;
 
   useEffect(() => {
     saveAppData(data);
   }, [data]);
 
-  // New-day check. Runs on load AND every time the app comes back to the
-  // foreground (an installed PWA can stay in the background for days).
   const runDailyCheck = () => {
     const todayStr = localDateStr();
     setData((prev) => {
       const lastActive = prev.player.lastActiveDate;
       if (!lastActive || lastActive === todayStr) return prev;
       const diffDays = daysBetween(lastActive, todayStr);
-      if (diffDays < 0) return prev; // device clock moved backwards: ignore
+      if (diffDays < 0) return prev;
 
       let streak = prev.player.streak;
       let shop = prev.shop;
       let lastStudyDate = prev.player.lastStudyDate;
+
       if (diffDays > 1) {
         const shieldItem = prev.shop.find((s) => s.type === 'shield' && s.quantity > 0);
         if (prev.player.resilienceUsedThisWeek) {
           showToast('Streak protected by Resilience!');
-        } else if (diffDays === 2 && prev.player.streak > 1 && shieldItem) {
-          // Streak Shield: saves exactly one missed day. The next study counts as consecutive.
+        } else if (shieldItem) {
           shop = prev.shop.map((s) => (s.id === shieldItem.id ? { ...s, quantity: s.quantity - 1 } : s));
           lastStudyDate = addDays(todayStr, -1);
-          showToast('Streak Shield used! Your streak is saved.');
+          streak = prev.player.streak + 1;
+          showToast('Streak Shield used! Your streak is saved and protected.');
         } else {
           streak = 1;
           showToast('Streak reset due to inactivity. A Comeback Quest has been issued.');
         }
       }
 
-      // Resilience can be used once per 7 days (counted from the day it was activated).
       let resilienceUsed = prev.player.resilienceUsedThisWeek;
       let resilienceDate = prev.player.resilienceUsedDate || '';
       if (resilienceUsed) {
@@ -120,7 +119,6 @@ export default function App() {
         }
       }
 
-      // Daily quests come back every new day; finished comeback quests are removed.
       const newQuests = prev.quests
         .filter((q) => !(q.type === 'comeback' && q.completed))
         .map((q) => (q.type === 'daily' && q.completed ? { ...q, completed: false, completedDate: undefined } : q));
@@ -173,7 +171,6 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Shown a moment later so it does not hide the XP / level-up message.
   const announceStreak = (streakDays: number) => {
     if (streakDays > 0) {
       setTimeout(() => showToast('Streak: ' + streakDays + ' days!'), 1500);
@@ -223,11 +220,14 @@ export default function App() {
       });
       const quest = prev.quests.find((q) => q.id === questId);
       if (!quest || quest.completed) return prev;
-
       const nextData = { ...prev, quests: updatedQuests };
       const streakResult = applyStudyStreak(nextData, localDateStr());
       announceStreak(streakResult.toastStreak);
-      return addXpAndGold(streakResult.data, quest.xpReward, quest.goldReward, showToast);
+      const res = addXpAndGold(streakResult.data, quest.xpReward, quest.goldReward, showToast);
+      if (res.leveledUp) {
+        setLevelUpData({ oldLevel: res.oldLevel, newLevel: res.newLevel, rank: res.data.player.rank });
+      }
+      return res.data;
     });
   };
 
@@ -259,7 +259,11 @@ export default function App() {
       };
       const streakResult = applyStudyStreak(nextData, localDateStr());
       announceStreak(streakResult.toastStreak);
-      return addXpAndGold(streakResult.data, xpAward, Math.round(minutes / 2), showToast);
+      const res = addXpAndGold(streakResult.data, xpAward, Math.round(minutes / 2), showToast);
+      if (res.leveledUp) {
+        setLevelUpData({ oldLevel: res.oldLevel, newLevel: res.newLevel, rank: res.data.player.rank });
+      }
+      return res.data;
     });
   };
 
@@ -320,7 +324,11 @@ export default function App() {
       const nextData = { ...prev, subjects: updatedSubjects };
       const streakResult = applyStudyStreak(nextData, todayStr);
       announceStreak(streakResult.toastStreak);
-      return addXpAndGold(streakResult.data, 30, 15, showToast);
+      const res = addXpAndGold(streakResult.data, 30, 15, showToast);
+      if (res.leveledUp) {
+        setLevelUpData({ oldLevel: res.oldLevel, newLevel: res.newLevel, rank: res.data.player.rank });
+      }
+      return res.data;
     });
   };
 
@@ -354,7 +362,6 @@ export default function App() {
         }
         return sub;
       });
-
       const nextData = {
         ...prev,
         subjects: updatedSubjects,
@@ -366,7 +373,11 @@ export default function App() {
       };
       const streakResult = applyStudyStreak(nextData, todayStr);
       announceStreak(streakResult.toastStreak);
-      return addXpAndGold(streakResult.data, 20, 10, showToast);
+      const res = addXpAndGold(streakResult.data, 20, 10, showToast);
+      if (res.leveledUp) {
+        setLevelUpData({ oldLevel: res.oldLevel, newLevel: res.newLevel, rank: res.data.player.rank });
+      }
+      return res.data;
     });
   };
 
@@ -379,7 +390,6 @@ export default function App() {
         }
         return sub;
       });
-
       const shadowName = chapter.title + ' Shadow';
       const power = 100 + chapter.revisionCount * 25;
       const newShadow = {
@@ -393,9 +403,7 @@ export default function App() {
         isDormant: false,
         extractedDate: localDateStr(),
       };
-
       setAriseData({ shadowName, subjectName, grade: 'Soldier', power });
-
       return {
         ...prev,
         subjects: updatedSubjects,
@@ -426,11 +434,95 @@ export default function App() {
     setData((prev) => {
       const gate = prev.gates.find((g) => g.id === gateId);
       if (!gate || gate.cleared) return prev;
-
       const updatedGates = prev.gates.map((g) => (g.id === gateId ? { ...g, bossCompleted: true, cleared: true, clearedDate: localDateStr() } : g));
       const nextData = { ...prev, gates: updatedGates };
       showToast('Boss Defeated! Gate Cleared. +' + gate.rewardXp + ' XP & +' + gate.rewardGold + ' Credits');
-      return addXpAndGold(nextData, gate.rewardXp, gate.rewardGold);
+      const res = addXpAndGold(nextData, gate.rewardXp, gate.rewardGold);
+      if (res.leveledUp) {
+        setLevelUpData({ oldLevel: res.oldLevel, newLevel: res.newLevel, rank: res.data.player.rank });
+      }
+      return res.data;
+    });
+  };
+
+  const handleStartExpedition = (shadow: Shadow) => {
+    setData((prev) => {
+      const already = prev.expeditions.some((e) => e.shadowId === shadow.id);
+      if (already) return prev;
+      const newExp = {
+        id: 'exp_' + Date.now(),
+        shadowId: shadow.id,
+        shadowName: shadow.customNickname || shadow.name,
+        destination: shadow.subjectName + ' Ruins',
+        durationMinutes: 15,
+        startTime: Date.now(),
+        rewardXp: 50,
+        rewardGold: 25,
+        completed: false,
+      };
+      showToast(`${shadow.customNickname || shadow.name} dispatched on a 15-minute expedition!`);
+      return {
+        ...prev,
+        expeditions: [newExp, ...prev.expeditions],
+      };
+    });
+  };
+
+  const handleClaimExpedition = (expId: string) => {
+    setData((prev) => {
+      const exp = prev.expeditions.find((e) => e.id === expId);
+      if (!exp) return prev;
+      const nextExpeditions = prev.expeditions.filter((e) => e.id !== expId);
+      const nextData = { ...prev, expeditions: nextExpeditions };
+      showToast(`Expedition successful! Claimed +${exp.rewardXp} XP and +${exp.rewardGold} Gold.`);
+      const res = addXpAndGold(nextData, exp.rewardXp, exp.rewardGold, showToast);
+      if (res.leveledUp) {
+        setLevelUpData({ oldLevel: res.oldLevel, newLevel: res.newLevel, rank: res.data.player.rank });
+      }
+      return res.data;
+    });
+  };
+
+  const handleClaimAchievement = (achievementId: string) => {
+    setData((prev) => {
+      const ach = prev.achievements.find((a) => a.id === achievementId);
+      if (!ach || ach.claimed) return prev;
+
+      const totalStudyMins = prev.sessions.reduce((acc, s) => acc + s.durationMinutes, 0) + prev.player.todayStudyMinutes;
+      const shadowCount = prev.shadows.length;
+      const gateCount = prev.gates.filter((g) => g.cleared).length;
+      const completedQuestCount = prev.quests.filter((q) => q.completed).length;
+      let totalRevisions = 0;
+      prev.subjects.forEach((sub) => sub.chapters.forEach((ch) => (totalRevisions += ch.revisionCount)));
+
+      const getMetricValue = (cat: string) => {
+        switch (cat) {
+          case 'Study Time': return totalStudyMins;
+          case 'Discipline': return prev.player.streak;
+          case 'Level': return prev.player.level;
+          case 'Army': return shadowCount;
+          case 'Gates': return gateCount;
+          case 'Knowledge': return totalRevisions;
+          case 'Quests': return completedQuestCount;
+          default: return 0;
+        }
+      };
+
+      const currentVal = getMetricValue(ach.category);
+      if (currentVal < ach.targetValue) return prev;
+
+      const updatedAchievements = prev.achievements.map((a) => (a.id === achievementId ? { ...a, unlocked: true, claimed: true } : a));
+      const nextData = { ...prev, achievements: updatedAchievements };
+      showToast(`Achievement Claimed: ${ach.title}! +${ach.rewardGold} Gold${ach.rewardGrowthPoints ? ` & +${ach.rewardGrowthPoints} Growth Point` : ''}`);
+      const res = addXpAndGold(nextData, ach.rewardGold * 2, ach.rewardGold, showToast);
+      let newGp = res.data.player.growthPoints + (ach.rewardGrowthPoints || 0);
+      if (res.leveledUp) {
+        setLevelUpData({ oldLevel: res.oldLevel, newLevel: res.newLevel, rank: res.data.player.rank });
+      }
+      return {
+        ...res.data,
+        player: { ...res.data.player, growthPoints: newGp },
+      };
     });
   };
 
@@ -554,7 +646,6 @@ export default function App() {
     setData((prev) => {
       const shopItem = prev.shop.find((s) => s.id === item.id);
       if (!shopItem || shopItem.quantity <= 0) return prev;
-
       if (item.type === 'potion') {
         if (prev.player.focusPotionActive) return prev;
         showToast('Focus Potion activated: +50% XP on your next focus session.');
@@ -564,7 +655,6 @@ export default function App() {
           shop: prev.shop.map((s) => (s.id === item.id ? { ...s, quantity: s.quantity - 1 } : s)),
         };
       }
-
       if (item.type === 'scroll') {
         if (prev.player.revisionScrollActive) return prev;
         showToast('Revision Scroll activated: your next review jumps one extra stage.');
@@ -574,7 +664,6 @@ export default function App() {
           shop: prev.shop.map((s) => (s.id === item.id ? { ...s, quantity: s.quantity - 1 } : s)),
         };
       }
-
       return prev;
     });
   };
@@ -584,10 +673,14 @@ export default function App() {
     showToast('System settings updated.');
   };
 
+
+
   const handleResetData = () => {
     localStorage.removeItem('SHADOW_STUDY_DATA_V2');
     localStorage.removeItem('SHADOW_STUDY_WELCOME_DONE');
-    window.location.reload();
+    localStorage.removeItem('SHADOW_STUDY_TIMER_STATE');
+    setData(loadAppData());
+    setCurrentTab('today');
   };
 
   const handleImportData = (imported: AppData) => {
@@ -606,7 +699,6 @@ export default function App() {
     );
   }
 
-  // All 14 system menus including Dungeon Gates
   const allNavItems = [
     { id: 'today', label: t('home', lang), icon: Home },
     { id: 'quests', label: t('quests', lang), icon: Target },
@@ -615,6 +707,7 @@ export default function App() {
     { id: 'gates', label: t('gates', lang), icon: Shield },
     { id: 'army', label: t('army', lang), icon: Ghost },
     { id: 'character', label: t('status', lang), icon: User },
+    { id: 'achievements', label: 'Achievements', icon: Trophy },
     { id: 'planner', label: t('planner', lang), icon: Calendar },
     { id: 'notes', label: t('notes', lang), icon: FileText },
     { id: 'insights', label: t('insights', lang), icon: BarChart2 },
@@ -674,21 +767,52 @@ export default function App() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setDoubleDungeonTitle(null)}
-                className="flex-1 py-2.5 rounded-lg border border-slate-800 text-slate-400 hover:text-white text-xs"
+                className="flex-1 py-2.5 rounded-lg border border-slate-800 text-slate-400 hover:text-white text-xs cursor-pointer"
               >
                 Decline
               </button>
               <button
                 onClick={() => {
-                  setData((prev) => addXpAndGold(prev, 150, 80, showToast));
+                  const res = addXpAndGold(data, 150, 80, showToast);
+                  if (res.leveledUp) {
+                    setLevelUpData({ oldLevel: res.oldLevel, newLevel: res.newLevel, rank: res.data.player.rank });
+                  }
+                  setData(res.data);
                   setDoubleDungeonTitle(null);
                   showToast('Double Dungeon Conquered! +150 XP & +80 Credits');
                 }}
-                className="flex-1 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-xs shadow"
+                className="flex-1 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-xs shadow cursor-pointer"
               >
                 Conquer Double Dungeon
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Level Up Celebration Overlay */}
+      {levelUpData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-lg p-4 animate-fadeIn">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute inset-[-50%] bg-[conic-gradient(from_0deg_at_50%_50%,rgba(6,182,212,0.15),rgba(59,130,246,0.15),rgba(147,51,234,0.15),rgba(6,182,212,0.15))] animate-level-beams"></div>
+          </div>
+          <div className="relative z-10 w-full max-w-md bg-gradient-to-b from-slate-900 via-[#0a1128] to-black border-2 border-cyan-400/80 rounded-2xl p-8 shadow-[0_0_50px_rgba(0,229,255,0.5)] text-center animate-level-box system-card space-y-4">
+            <div className="text-cyan-400 font-mono text-xs tracking-widest uppercase">[ SYSTEM NOTIFICATION ]</div>
+            <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-400 to-cyan-100 font-mono tracking-wider">
+              LEVEL UP!
+            </h2>
+            <div className="text-5xl font-black font-mono text-white tracking-widest py-2">
+              {levelUpData.oldLevel} &rarr; <span className="text-cyan-400">{levelUpData.newLevel}</span>
+            </div>
+            <p className="text-xs font-mono text-cyan-200/80">
+              Rank: <span className="text-cyan-400 font-bold">{levelUpData.rank}</span> | +1 Growth Point Awarded
+            </p>
+            <button
+              onClick={() => setLevelUpData(null)}
+              className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-mono text-xs uppercase font-bold tracking-wider py-3 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.6)] transition-all cursor-pointer"
+            >
+              Acknowledge & Continue
+            </button>
           </div>
         </div>
       )}
@@ -698,7 +822,7 @@ export default function App() {
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg bg-slate-900 text-blue-400 border border-slate-800 hover:border-slate-700 transition-colors"
+            className="p-2 rounded-lg bg-slate-900 text-blue-400 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer"
             title="System Menu"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -707,9 +831,8 @@ export default function App() {
             <span className="text-blue-400 font-bold text-sm md:text-base tracking-wider uppercase font-mono">[{t('appTitle', lang)}]</span>
           </div>
         </div>
-
         <div className="flex items-center space-x-3">
-          <div 
+          <div
             onClick={() => setShowStatusPopup(true)}
             className="pro-card px-3 py-1.5 cursor-pointer hover:border-blue-500/50 transition-colors flex items-center gap-2 text-xs font-semibold"
           >
@@ -723,25 +846,23 @@ export default function App() {
       {/* Slide-over Hamburger Navigation Drawer */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex">
-          <div 
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm animate-fadeIn" 
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm animate-fadeIn"
             onClick={() => setMobileMenuOpen(false)}
           ></div>
-
           <div className="relative w-80 max-w-[85vw] bg-[#0f172a] border-r border-slate-800 h-full shadow-2xl flex flex-col z-10 animate-slideRight">
             <div className="p-4 border-b border-slate-800 flex items-center justify-between">
               <div>
-                <div className="text-[10px] font-mono text-blue-400 tracking-widest uppercase">SYSTEM DIRECTORY</div>
+                <div className="text-[10px] font-mono text-blue-400 tracking-widest">SYSTEM DIRECTORY</div>
                 <div className="text-base font-bold text-white">{data.player.name}</div>
               </div>
-              <button 
+              <button
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-2 rounded-lg bg-slate-900 text-slate-400 hover:text-white"
+                className="p-2 rounded-lg bg-slate-900 text-slate-400 hover:text-white cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-
             <div className="flex-1 overflow-y-auto p-4 space-y-1">
               {allNavItems.map((item) => {
                 const Icon = item.icon;
@@ -754,7 +875,7 @@ export default function App() {
                       setMobileMenuOpen(false);
                     }}
                     className={
-                      'w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-xs font-medium transition-all ' +
+                      'w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-xs font-medium transition-all cursor-pointer ' +
                       (isActive
                         ? 'bg-blue-600 text-white font-semibold shadow'
                         : 'text-slate-300 hover:bg-slate-900 hover:text-white')
@@ -766,9 +887,8 @@ export default function App() {
                 );
               })}
             </div>
-
             <div className="p-4 border-t border-slate-800 text-[11px] font-mono text-slate-400 text-center">
-              Shadow Study v1.0 • Offline PWA
+              Shadow Study v2.0 | Offline PWA
             </div>
           </div>
         </div>
@@ -781,8 +901,9 @@ export default function App() {
         {currentTab === 'focus' && <FocusScreen data={data} onFinishSession={handleFinishFocusSession} />}
         {currentTab === 'learn' && <LearnScreen data={data} onAddSubject={handleAddSubject} onAddChapter={handleAddChapter} onMarkLearned={handleMarkLearned} onReviewChapter={handleReviewChapter} onExtractShadow={handleExtractShadow} />}
         {currentTab === 'gates' && <GatesScreen data={data} onAddGate={handleAddGate} onToggleGateStep={handleToggleGateStep} onCompleteBoss={handleCompleteBoss} onTriggerDoubleDungeon={setDoubleDungeonTitle} />}
-        {currentTab === 'army' && <ArmyScreen data={data} onUpdateNickname={handleUpdateNickname} />}
+        {currentTab === 'army' && <ArmyScreen data={data} onUpdateNickname={handleUpdateNickname} onStartExpedition={handleStartExpedition} onClaimExpedition={handleClaimExpedition} />}
         {currentTab === 'character' && <CharacterScreen data={data} onAllocatePoint={handleAllocatePoint} onSelectPath={handleSelectPath} onUseResilience={handleUseResilience} onUnlockReward={handleUnlockReward} />}
+        {currentTab === 'achievements' && <AchievementsScreen data={data} onClaimAchievement={handleClaimAchievement} />}
         {currentTab === 'planner' && <PlannerScreen data={data} onAddPlanner={handleAddPlanner} onTogglePlanner={handleTogglePlanner} onDeletePlanner={handleDeletePlanner} />}
         {currentTab === 'notes' && <NotesScreen data={data} onAddNote={handleAddNote} onTogglePin={handleTogglePinNote} onDeleteNote={handleDeleteNote} />}
         {currentTab === 'insights' && <InsightsScreen data={data} />}
@@ -802,7 +923,7 @@ export default function App() {
               key={item.id}
               onClick={() => setCurrentTab(item.id)}
               className={
-                'flex-1 flex flex-col items-center gap-1 py-1.5 text-[0.65rem] uppercase tracking-wider transition-all ' +
+                'flex-1 flex flex-col items-center gap-1 py-1.5 text-[0.65rem] uppercase tracking-wider transition-all cursor-pointer ' +
                 (isActive ? 'text-blue-400 font-bold' : 'text-slate-400 hover:text-slate-200')
               }
             >

@@ -1,16 +1,16 @@
 import React from 'react';
 import { AppData, ShopItem } from '../../types';
-import { Sparkles, ShoppingBag } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 interface Props {
   data: AppData;
   onBuyItem: (item: ShopItem) => void;
-  onUseItem ? : (item: ShopItem) => void;
+  onUseItem?: (item: ShopItem) => void;
 }
 
-export const ShopScreen: React.FC < Props > = ({ data, onBuyItem, onUseItem }) => {
+export const ShopScreen: React.FC<Props> = ({ data, onBuyItem, onUseItem }) => {
   const { player, shop } = data;
-  
+
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       <div className="bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-6 flex items-center justify-between">
@@ -36,7 +36,6 @@ export const ShopScreen: React.FC < Props > = ({ data, onBuyItem, onUseItem }) =
               <h3 className="text-lg font-bold font-mono text-white mb-1">{item.name}</h3>
               <p className="text-xs font-mono text-cyan-400/80 mb-4">{item.description}</p>
 
-              {/* Item effect controls */}
               {item.type === 'potion' && (
                 <>
                   {player.focusPotionActive ? (
@@ -46,7 +45,7 @@ export const ShopScreen: React.FC < Props > = ({ data, onBuyItem, onUseItem }) =
                   ) : item.quantity > 0 ? (
                     <button
                       onClick={() => onUseItem && onUseItem(item)}
-                      className="w-full mb-3 py-2 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-mono text-[11px] font-bold uppercase tracking-wider transition-all"
+                      className="w-full mb-3 py-2 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-mono text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer"
                     >
                       Use Potion
                     </button>
@@ -63,7 +62,7 @@ export const ShopScreen: React.FC < Props > = ({ data, onBuyItem, onUseItem }) =
                   ) : item.quantity > 0 ? (
                     <button
                       onClick={() => onUseItem && onUseItem(item)}
-                      className="w-full mb-3 py-2 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-mono text-[11px] font-bold uppercase tracking-wider transition-all"
+                      className="w-full mb-3 py-2 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-mono text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer"
                     >
                       Use Scroll
                     </button>
@@ -84,7 +83,7 @@ export const ShopScreen: React.FC < Props > = ({ data, onBuyItem, onUseItem }) =
               className={
                 'w-full py-2.5 rounded-xl font-mono text-xs font-bold uppercase transition-all ' +
                 (player.gold >= item.cost
-                  ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow'
+                  ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow cursor-pointer'
                   : 'bg-slate-800 text-slate-500 cursor-not-allowed')
               }
             >

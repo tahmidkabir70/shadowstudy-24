@@ -14,16 +14,6 @@ export function calculateRank(level: number): Rank {
   return 'E';
 }
 
-export function attributeGrade(val: number): string {
-  if (val >= 150) return 'S';
-  if (val >= 120) return 'A';
-  if (val >= 90) return 'B';
-  if (val >= 70) return 'C';
-  if (val >= 50) return 'D';
-  if (val >= 30) return 'E';
-  return 'F';
-}
-
 export const INTERVAL_STAGES = [1, 3, 7, 14, 30, 60];
 
 export function getNextRevisionDays(currentStage: number, rating: 'hard' | 'good' | 'easy'): { nextStage: number; days: number } {
@@ -44,20 +34,17 @@ export function addXpAndGold(
   xp: number,
   gold: number,
   callback?: (msg: string) => void
-): AppData {
+): { data: AppData; leveledUp: boolean; oldLevel: number; newLevel: number } {
   let { xp: currentXp, level, gold: currentGold, growthPoints } = data.player;
-  
+  const oldLevel = level;
   let finalXp = xp;
   if (data.player.activePassives.includes('Hyper Focus') && xp >= 25) {
     finalXp = Math.round(xp * 1.2);
   }
-
   currentXp += finalXp;
   currentGold += gold;
-
   let reqXp = calculateXpForNextLevel(level);
   let leveledUp = false;
-
   while (currentXp >= reqXp) {
     currentXp -= reqXp;
     level += 1;
@@ -65,7 +52,6 @@ export function addXpAndGold(
     leveledUp = true;
     reqXp = calculateXpForNextLevel(level);
   }
-
   const newRank = calculateRank(level);
   if (leveledUp) {
     sound.playLevelUp(data.settings.soundEnabled);
@@ -74,7 +60,6 @@ export function addXpAndGold(
     sound.playSuccess(data.settings.soundEnabled);
     if (callback) callback(`Gained +${finalXp} XP and +${gold} Credits`);
   }
-
   const unlockedTitles = [...data.player.unlockedTitles];
   let title = data.player.title;
   if (level >= 10 && !unlockedTitles.includes('Rising Shadow')) {
@@ -89,8 +74,7 @@ export function addXpAndGold(
     unlockedTitles.push("Monarch's Candidate");
     title = "Monarch's Candidate";
   }
-
-  return {
+  const updatedData: AppData = {
     ...data,
     player: {
       ...data.player,
@@ -103,4 +87,5 @@ export function addXpAndGold(
       unlockedTitles,
     },
   };
+  return { data: updatedData, leveledUp, oldLevel, newLevel: level };
 }

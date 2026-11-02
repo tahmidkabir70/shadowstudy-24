@@ -1,7 +1,7 @@
 // Local-time date helpers. Do NOT use toISOString() for calendar dates,
-// because it returns UTC which is wrong for Bangladesh (UTC+6).
+// because it returns UTC which is wrong for Bangladesh (UTC+6) or local time zones.
 
-export function localDateStr(d ? : Date): string {
+export function localDateStr(d?: Date): string {
   const date = d || new Date();
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

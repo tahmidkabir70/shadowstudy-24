@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { sound } from '../utils/sound';
-import { Ghost, Sparkles, X } from 'lucide-react';
+import { Ghost, Sparkles } from 'lucide-react';
 
 interface Props {
   shadowName: string;
@@ -18,7 +18,7 @@ export const AriseModal: React.FC<Props> = ({ shadowName, subjectName, grade, po
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-lg p-4 animate-fadeIn">
-      <div className="relative w-full max-w-lg bg-gradient-to-b from-purple-950 via-slate-950 to-black border-2 border-purple-500 rounded-2xl p-8 shadow-[0_0_50px_rgba(168,85,247,0.5)] text-center animate-scaleUp">
+      <div className="relative w-full max-w-lg bg-gradient-to-b from-purple-950 via-slate-950 to-black border-2 border-purple-500 rounded-2xl p-8 shadow-[0_0_50px_rgba(168,85,247,0.5)] text-center animate-scaleUp animate-flicker">
         {/* Glow Effects */}
         <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl blur-xl opacity-30 animate-pulse"></div>
 

@@ -1,4 +1,5 @@
 export type Rank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S';
+
 export type JobPath = 'Scholar' | 'Strategist' | 'Endurer' | 'None';
 
 export interface Attributes {
@@ -19,22 +20,23 @@ export interface Player {
   rank: Rank;
   title: string;
   path: JobPath;
-  gold: number; // Currency from study
+  gold: number;
   growthPoints: number;
   attributes: Attributes;
-  attributeGrades: Record<keyof Attributes, string>;
+  attributeGrades: Record < keyof Attributes,
+  string > ;
   dailyGoalMinutes: number;
   todayStudyMinutes: number;
   todayRevisionsDone: number;
   totalRevisionsDue: number;
-  fatigueMinutes: number; // continuous study without 10m break
+  fatigueMinutes: number;
   streak: number;
   lastActiveDate: string;
-  lastStudyDate: string; // local date (YYYY-MM-DD) of the last study action that counted for the streak
+  lastStudyDate: string;
   resilienceUsedThisWeek: boolean;
-  resilienceUsedDate: string; // local date (YYYY-MM-DD) when Resilience was activated
-  focusPotionActive: boolean; // Focus Potion armed: next focus session gives +50% XP
-  revisionScrollActive: boolean; // Revision Scroll armed: next review jumps one extra stage
+  resilienceUsedDate: string;
+  focusPotionActive: boolean;
+  revisionScrollActive: boolean;
   activePassives: string[];
   unlockedSkills: string[];
   unlockedTitles: string[];
@@ -54,9 +56,9 @@ export interface Quest {
   xpReward: number;
   goldReward: number;
   completed: boolean;
-  completedDate?: string;
-  chainId?: string;
-  targetMinutes?: number;
+  completedDate ? : string;
+  chainId ? : string;
+  targetMinutes ? : number;
 }
 
 export interface Chapter {
@@ -64,10 +66,10 @@ export interface Chapter {
   subjectId: string;
   title: string;
   learned: boolean;
-  learnedDate?: string;
+  learnedDate ? : string;
   revisionCount: number;
-  nextRevisionDate?: string;
-  lastRevisionDate?: string;
+  nextRevisionDate ? : string;
+  lastRevisionDate ? : string;
   intervalStage: number; // 0, 1(1d), 2(3d), 3(7d), 4(14d), 5(30d), 6(60d)
   extractedToShadow: boolean;
 }
@@ -85,7 +87,7 @@ export interface Shadow {
   id: string;
   chapterId: string;
   name: string;
-  customNickname?: string;
+  customNickname ? : string;
   subjectName: string;
   grade: ShadowGrade;
   power: number;
@@ -112,9 +114,9 @@ export interface Gate {
   bossCompleted: boolean;
   rewardXp: number;
   rewardGold: number;
-  deadline?: string;
+  deadline ? : string;
   cleared: boolean;
-  clearedDate?: string;
+  clearedDate ? : string;
 }
 
 export interface PlannerItem {
@@ -158,13 +160,49 @@ export interface SkillItem {
 export interface RewardItem {
   id: string;
   title: string;
+  category: string;
   unlocked: boolean;
-  unlockedDate?: string;
+  unlockedAt ? : number;
   costGold: number;
 }
 
+export interface Expedition {
+  id: string;
+  shadowId: string;
+  shadowName: string;
+  destination: string;
+  durationMinutes: number;
+  startTime: number;
+  rewardXp: number;
+  rewardGold: number;
+  completed: boolean;
+}
+
+export type AchievementTier = 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond' | 'Monarch';
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  category: 'Study Time' | 'Discipline' | 'Level' | 'Army' | 'Gates' | 'Knowledge' | 'Quests';
+  tier: AchievementTier;
+  targetValue: number;
+  unlocked: boolean;
+  claimed: boolean;
+  rewardGold: number;
+  rewardGrowthPoints ? : number;
+}
+
+export interface DailyEvaluation {
+  date: string;
+  rank: Rank;
+  studyMinutes: number;
+  completedQuests: number;
+  summary: string;
+}
+
 export interface SeasonData {
-  currentWeek: number; // 1 to 12
+  currentWeek: number;
   seasonName: string;
   active: boolean;
   bossDefeated: boolean;
@@ -198,6 +236,9 @@ export interface AppData {
   shop: ShopItem[];
   skills: SkillItem[];
   rewards: RewardItem[];
+  expeditions: Expedition[];
+  achievements: Achievement[];
+  evaluations: DailyEvaluation[];
   season: SeasonData;
   sessions: StudySessionLog[];
   settings: AppSettings;
