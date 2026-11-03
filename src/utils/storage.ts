@@ -112,7 +112,7 @@ function generateAchievements(): Achievement[] {
   const list: Achievement[] = [];
   let idCounter = 1;
 
-  const timeTargets = [15, 30, 60, 120, 300, 600, 1200, 1800, 3000, 4500, 6000, 9000, 12000, 15000, 20000, 25000, 30000, 40000, 50000];
+  const timeTargets = [60, 180, 360, 600, 1200, 1800, 3000, 4500, 6000, 9000, 12000, 15000, 21000, 30000, 42000, 60000, 90000, 120000, 180000];
   timeTargets.forEach((target, idx) => {
     const tier = idx < 3 ? 'Bronze' : idx < 7 ? 'Silver' : idx < 11 ? 'Gold' : idx < 15 ? 'Platinum' : idx < 18 ? 'Diamond' : 'Monarch';
     list.push({
@@ -129,7 +129,7 @@ function generateAchievements(): Achievement[] {
     });
   });
 
-  const streakTargets = [1, 3, 5, 7, 10, 14, 21, 30, 45, 60, 75, 90, 100, 120, 150, 180, 200, 250, 300, 365];
+  const streakTargets = [3, 7, 14, 21, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300, 365, 450, 540, 730, 900, 1095];
   streakTargets.forEach((target, idx) => {
     const tier = idx < 3 ? 'Bronze' : idx < 7 ? 'Silver' : idx < 11 ? 'Gold' : idx < 15 ? 'Platinum' : idx < 18 ? 'Diamond' : 'Monarch';
     list.push({
@@ -146,7 +146,7 @@ function generateAchievements(): Achievement[] {
     });
   });
 
-  const levelTargets = [2, 3, 4, 5, 7, 10, 15, 20, 25, 30, 35, 40, 50, 60, 70, 75, 85, 90, 100];
+  const levelTargets = [5, 8, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 85, 90, 100];
   levelTargets.forEach((target, idx) => {
     const tier = idx < 3 ? 'Bronze' : idx < 7 ? 'Silver' : idx < 11 ? 'Gold' : idx < 15 ? 'Platinum' : idx < 18 ? 'Diamond' : 'Monarch';
     list.push({
@@ -163,7 +163,7 @@ function generateAchievements(): Achievement[] {
     });
   });
 
-  const armyTargets = [1, 2, 3, 4, 5, 7, 10, 12, 15, 20, 25, 30, 35, 40, 50];
+  const armyTargets = [3, 5, 8, 12, 16, 20, 25, 30, 40, 50, 60, 75, 90, 110, 130];
   armyTargets.forEach((target, idx) => {
     const tier = idx < 3 ? 'Bronze' : idx < 6 ? 'Silver' : idx < 10 ? 'Gold' : idx < 13 ? 'Platinum' : 'Monarch';
     list.push({
@@ -180,7 +180,7 @@ function generateAchievements(): Achievement[] {
     });
   });
 
-  const gateTargets = [1, 2, 3, 5, 7, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50];
+  const gateTargets = [1, 3, 5, 8, 12, 16, 20, 25, 30, 40, 50, 65, 80, 100, 130];
   gateTargets.forEach((target, idx) => {
     const tier = idx < 3 ? 'Bronze' : idx < 6 ? 'Silver' : idx < 10 ? 'Gold' : idx < 13 ? 'Platinum' : 'Monarch';
     list.push({
@@ -197,7 +197,7 @@ function generateAchievements(): Achievement[] {
     });
   });
 
-  const revTargets = [1, 3, 5, 10, 15, 20, 30, 40, 50, 75, 100, 125, 150, 175, 200];
+  const revTargets = [5, 15, 30, 50, 80, 120, 180, 250, 350, 500, 700, 900, 1200, 1600, 2000];
   revTargets.forEach((target, idx) => {
     const tier = idx < 3 ? 'Bronze' : idx < 6 ? 'Silver' : idx < 10 ? 'Gold' : idx < 13 ? 'Platinum' : 'Monarch';
     list.push({
@@ -214,7 +214,7 @@ function generateAchievements(): Achievement[] {
     });
   });
 
-  const questTargets = [1, 3, 5, 10, 15, 20, 30, 40, 50, 75, 90, 100];
+  const questTargets = [5, 15, 30, 60, 100, 150, 250, 400, 600, 900, 1300, 2000];
   questTargets.forEach((target, idx) => {
     const tier = idx < 3 ? 'Bronze' : idx < 6 ? 'Silver' : idx < 9 ? 'Gold' : 'Platinum';
     list.push({
@@ -243,6 +243,13 @@ const defaultSeason: SeasonData = {
   startDate: localDateStr(),
 };
 
+// Keep already-claimed achievements; unclaimed ones take the current (harder) definitions.
+function mergeAchievements(saved?: Achievement[]): Achievement[] {
+  if (!saved) return defaultAchievements;
+  const claimed = new Map(saved.filter((a) => a.claimed).map((a) => [a.id, a] as [string, Achievement]));
+  return defaultAchievements.map((a) => claimed.get(a.id) || a);
+}
+
 export function normalizeData(parsed: AppData): AppData {
   const now = Date.now();
   const seasonBase = { ...defaultSeason, ...(parsed.season || {}) };
@@ -269,7 +276,7 @@ export function normalizeData(parsed: AppData): AppData {
     skills: parsed.skills || defaultSkills,
     rewards,
     expeditions: parsed.expeditions || [],
-    achievements: parsed.achievements || defaultAchievements,
+    achievements: mergeAchievements(parsed.achievements),
     evaluations: parsed.evaluations || [],
     season,
     sessions: parsed.sessions || [],

@@ -27,7 +27,7 @@ export const GatesScreen: React.FC<Props> = ({ data, onAddGate, onToggleGateStep
     if (stepText2.trim()) steps.push({ id: `gs_${Date.now()}_2`, text: stepText2.trim(), completed: false });
     if (steps.length === 0) steps.push({ id: `gs_${Date.now()}_1`, text: 'Complete baseline preparation', completed: false });
 
-    const rewardXp = rank === 'S' ? 500 : rank === 'A' ? 350 : rank === 'B' ? 250 : rank === 'C' ? 180 : rank === 'D' ? 120 : 80;
+    const rewardXp = rank === 'S' ? 250 : rank === 'A' ? 180 : rank === 'B' ? 130 : rank === 'C' ? 90 : rank === 'D' ? 60 : 40;
     const rewardGold = Math.round(rewardXp / 2);
 
     const newGate: Gate = {

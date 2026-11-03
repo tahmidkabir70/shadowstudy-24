@@ -237,7 +237,10 @@ export default function App() {
       const nextData = { ...prev, quests: updatedQuests };
       const streakResult = applyStudyStreak(nextData, localDateStr());
       announceStreak(streakResult.toastStreak);
-      const res = addXpAndGold(streakResult.data, quest.xpReward, quest.goldReward, showToast);
+      const rewardedToday = prev.quests.filter((q) => q.completed && q.completedDate === localDateStr()).length;
+      const questCapped = rewardedToday >= 6;
+      if (questCapped) showToast('Daily quest reward cap reached (6 quests).');
+      const res = addXpAndGold(streakResult.data, questCapped ? 0 : quest.xpReward, questCapped ? 0 : quest.goldReward, showToast);
       if (res.leveledUp) {
         setLevelUpData({ oldLevel: res.oldLevel, newLevel: res.newLevel, rank: res.data.player.rank });
       }
@@ -260,10 +263,10 @@ export default function App() {
   const handleFinishFocusSession = (minutes: number, subject: string) => {
     setData((prev) => {
       const todayStudyMins = prev.player.todayStudyMinutes + minutes;
-      let xpAward = minutes * 2;
+      let xpAward = minutes;
       let focusPotionActive = prev.player.focusPotionActive;
       if (focusPotionActive) {
-        xpAward = Math.round(minutes * 2 * 1.5);
+        xpAward = Math.round(minutes * 1.5);
         focusPotionActive = false;
       }
       const nextData = {
@@ -276,7 +279,7 @@ export default function App() {
       };
       const streakResult = applyStudyStreak(nextData, localDateStr());
       announceStreak(streakResult.toastStreak);
-      const res = addXpAndGold(streakResult.data, xpAward, Math.round(minutes / 2), showToast);
+      const res = addXpAndGold(streakResult.data, xpAward, Math.round(minutes / 3), showToast);
       if (res.leveledUp) {
         setLevelUpData({ oldLevel: res.oldLevel, newLevel: res.newLevel, rank: res.data.player.rank });
       }
@@ -343,7 +346,10 @@ export default function App() {
       const nextData = { ...prev, subjects: updatedSubjects };
       const streakResult = applyStudyStreak(nextData, todayStr);
       announceStreak(streakResult.toastStreak);
-      const res = addXpAndGold(streakResult.data, 30, 15, showToast);
+      const learnedToday = prev.subjects.reduce((n, sub) => n + sub.chapters.filter((c) => c.learnedDate === todayStr).length, 0);
+      const learnCapped = learnedToday >= 5;
+      if (learnCapped) showToast('Daily learn reward cap reached (5 chapters).');
+      const res = addXpAndGold(streakResult.data, learnCapped ? 0 : 20, learnCapped ? 0 : 10, showToast);
       if (res.leveledUp) {
         setLevelUpData({ oldLevel: res.oldLevel, newLevel: res.newLevel, rank: res.data.player.rank });
       }
@@ -354,8 +360,8 @@ export default function App() {
   const handleReviewChapter = (subjectId: string, chapterId: string, rating: 'hard' | 'good' | 'easy') => {
     setData((prev) => {
       const chBefore = prev.subjects.find((s) => s.id === subjectId)?.chapters.find((c) => c.id === chapterId);
-      if (!chBefore || !chBefore.learned) return prev;
       const todayStr = localDateStr();
+      if (!chBefore || !chBefore.learned || !chBefore.nextRevisionDate || chBefore.nextRevisionDate > todayStr) return prev;
       let usedScroll = false;
       const updatedSubjects = prev.subjects.map((sub) => {
         if (sub.id === subjectId) {
@@ -404,7 +410,7 @@ export default function App() {
       };
       const streakResult = applyStudyStreak(nextData, todayStr);
       announceStreak(streakResult.toastStreak);
-      const res = addXpAndGold(streakResult.data, 20, 10, showToast);
+      const res = addXpAndGold(streakResult.data, 10, 5, showToast);
       if (res.leveledUp) {
         setLevelUpData({ oldLevel: res.oldLevel, newLevel: res.newLevel, rank: res.data.player.rank });
       }
@@ -482,18 +488,22 @@ export default function App() {
     setData((prev) => {
       const already = prev.expeditions.some((e) => e.shadowId === shadow.id);
       if (already) return prev;
+      if (prev.expeditions.length >= 3) {
+        showToast('Only 3 expeditions can run at once.');
+        return prev;
+      }
       const newExp = {
         id: 'exp_' + Date.now(),
         shadowId: shadow.id,
         shadowName: shadow.customNickname || shadow.name,
         destination: shadow.subjectName + ' Ruins',
-        durationMinutes: 15,
+        durationMinutes: 60,
         startTime: Date.now(),
-        rewardXp: 50,
-        rewardGold: 25,
+        rewardXp: 10,
+        rewardGold: 5,
         completed: false,
       };
-      showToast(`${shadow.customNickname || shadow.name} dispatched on a 15-minute expedition!`);
+      showToast(`${shadow.customNickname || shadow.name} dispatched on a 60-minute expedition!`);
       return {
         ...prev,
         expeditions: [newExp, ...prev.expeditions],
@@ -547,7 +557,7 @@ export default function App() {
       const updatedAchievements = prev.achievements.map((a) => (a.id === achievementId ? { ...a, unlocked: true, claimed: true } : a));
       const nextData = { ...prev, achievements: updatedAchievements };
       showToast(`Achievement Claimed: ${ach.title}! +${ach.rewardGold} Gold${ach.rewardGrowthPoints ? ` & +${ach.rewardGrowthPoints} Growth Point` : ''}`);
-      const res = addXpAndGold(nextData, ach.rewardGold * 2, ach.rewardGold, showToast);
+      const res = addXpAndGold(nextData, 0, ach.rewardGold, showToast);
       let newGp = res.data.player.growthPoints + (ach.rewardGrowthPoints || 0);
       if (res.leveledUp) {
         setLevelUpData({ oldLevel: res.oldLevel, newLevel: res.newLevel, rank: res.data.player.rank });

@@ -25,8 +25,8 @@ export const QuestsScreen: React.FC<Props> = ({ data, onCompleteQuest, onAddQues
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
-    const xpReward = newDiff === 'easy' ? 10 : newDiff === 'medium' ? 25 : 50;
-    const goldReward = newDiff === 'easy' ? 5 : newDiff === 'medium' ? 12 : 25;
+    const xpReward = newDiff === 'easy' ? 5 : newDiff === 'medium' ? 12 : 25;
+    const goldReward = newDiff === 'easy' ? 3 : newDiff === 'medium' ? 6 : 12;
     const newQuest: Quest = {
       id: `custom_${Date.now()}`,
       title: newTitle,

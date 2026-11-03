@@ -158,6 +158,7 @@ export const LearnScreen: React.FC<Props> = ({ data, onAddSubject, onAddChapter,
                       </button>
                     ) : (
                       <>
+                        {isDue ? (
                         <div className="flex bg-slate-900 border border-cyan-500/30 rounded-xl overflow-hidden font-mono text-xs">
                           <button
                             onClick={() => onReviewChapter(activeSub.id, ch.id, 'hard')}
@@ -181,6 +182,9 @@ export const LearnScreen: React.FC<Props> = ({ data, onAddSubject, onAddChapter,
                             Easy
                           </button>
                         </div>
+                        ) : (
+                          <div className="text-[11px] font-mono text-slate-500 px-3 py-2">Review unlocks {ch.nextRevisionDate}</div>
+                        )}
                         {canExtract && (
                           <button
                             onClick={() => onExtractShadow(ch, activeSub.name)}

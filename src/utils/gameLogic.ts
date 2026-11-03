@@ -2,7 +2,7 @@ import { AppData, Rank, ShadowGrade } from '../types';
 import { sound } from './sound';
 
 export function calculateXpForNextLevel(level: number): number {
-  return 100 + (level - 1) * 25;
+  return 200 * level;
 }
 
 export function calculateRank(level: number): Rank {

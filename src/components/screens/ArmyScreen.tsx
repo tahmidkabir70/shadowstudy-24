@@ -114,7 +114,7 @@ export const ArmyScreen: React.FC<Props> = ({ data, onUpdateNickname, onStartExp
                     isOnExpedition ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow'
                   }`}
                 >
-                  <Send className="w-3.5 h-3.5" /> {isOnExpedition ? 'On Expedition' : 'Dispatch on Expedition (15m)'}
+                  <Send className="w-3.5 h-3.5" /> {isOnExpedition ? 'On Expedition' : 'Dispatch on Expedition (60m)'}
                 </button>
               </div>
             </div>
