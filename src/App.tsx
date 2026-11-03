@@ -5,9 +5,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { AppData, AppSettings, Chapter, Gate, JobPath, NoteItem, PlannerItem, Player, Quest, Shadow, ShopItem, Subject } from './types';
-import { loadAppData, saveAppData } from './utils/storage';
-import { addXpAndGold, getNextRevisionDays, calculateRank } from './utils/gameLogic';
-import { localDateStr, daysBetween, addDays } from './utils/date';
+import { loadAppData, saveAppData, normalizeData } from './utils/storage';
+import { addXpAndGold, getNextRevisionDays, calculateRank, gradeForRevisions, powerForRevisions } from './utils/gameLogic';
+import { localDateStr, daysBetween, addDays, seasonWeek } from './utils/date';
 import { sound } from './utils/sound';
 import { t } from './utils/i18n';
 import { StatusWindowModal } from './components/StatusWindowModal';
@@ -139,8 +139,20 @@ export default function App() {
         }
       }
 
+      // Shadows whose chapter revision is 3+ days overdue become dormant; revising wakes them.
+      const updatedShadows = prev.shadows.map((sh) => {
+        const chapterRef = prev.subjects.flatMap((sub) => sub.chapters).find((ch) => ch.id === sh.chapterId);
+        if (!chapterRef || !chapterRef.nextRevisionDate) return sh;
+        const dormant = daysBetween(chapterRef.nextRevisionDate, todayStr) >= 3;
+        return sh.isDormant === dormant ? sh : { ...sh, isDormant: dormant };
+      });
+      const seasonStart = prev.season.startDate || todayStr;
+      const updatedSeason = { ...prev.season, startDate: seasonStart, currentWeek: seasonWeek(seasonStart, todayStr) };
+
       return {
         ...prev,
+        shadows: updatedShadows,
+        season: updatedSeason,
         player: {
           ...prev.player,
           streak,
@@ -227,7 +239,10 @@ export default function App() {
       if (res.leveledUp) {
         setLevelUpData({ oldLevel: res.oldLevel, newLevel: res.newLevel, rank: res.data.player.rank });
       }
-      return res.data;
+      return {
+        ...res.data,
+        player: { ...res.data.player, questsCompletedTotal: (res.data.player.questsCompletedTotal || 0) + 1 },
+      };
     });
   };
 
@@ -307,6 +322,8 @@ export default function App() {
 
   const handleMarkLearned = (subjectId: string, chapterId: string) => {
     setData((prev) => {
+      const existingCh = prev.subjects.find((s) => s.id === subjectId)?.chapters.find((c) => c.id === chapterId);
+      if (!existingCh || existingCh.learned) return prev;
       const todayStr = localDateStr();
       const nextRev = addDays(todayStr, 1);
       const updatedSubjects = prev.subjects.map((sub) => {
@@ -334,6 +351,8 @@ export default function App() {
 
   const handleReviewChapter = (subjectId: string, chapterId: string, rating: 'hard' | 'good' | 'easy') => {
     setData((prev) => {
+      const chBefore = prev.subjects.find((s) => s.id === subjectId)?.chapters.find((c) => c.id === chapterId);
+      if (!chBefore || !chBefore.learned) return prev;
       const todayStr = localDateStr();
       let usedScroll = false;
       const updatedSubjects = prev.subjects.map((sub) => {
@@ -362,9 +381,19 @@ export default function App() {
         }
         return sub;
       });
+      const newRevCount = chBefore.revisionCount + 1;
+      const updatedShadows = prev.shadows.map((sh) => {
+        if (sh.chapterId !== chapterId) return sh;
+        const newGrade = gradeForRevisions(newRevCount);
+        if (newGrade !== sh.grade) {
+          showToast(`${sh.customNickname || sh.name} evolved to ${newGrade}!`);
+        }
+        return { ...sh, grade: newGrade, power: powerForRevisions(newRevCount), isDormant: false, lastRevisedDate: todayStr };
+      });
       const nextData = {
         ...prev,
         subjects: updatedSubjects,
+        shadows: updatedShadows,
         player: {
           ...prev.player,
           todayRevisionsDone: prev.player.todayRevisionsDone + 1,
@@ -383,6 +412,8 @@ export default function App() {
 
   const handleExtractShadow = (chapter: Chapter, subjectName: string) => {
     setData((prev) => {
+      const srcChapter = prev.subjects.find((s) => s.id === chapter.subjectId)?.chapters.find((c) => c.id === chapter.id);
+      if (!srcChapter || !srcChapter.learned || srcChapter.extractedToShadow || srcChapter.revisionCount < 2) return prev;
       const updatedSubjects = prev.subjects.map((sub) => {
         if (sub.id === chapter.subjectId) {
           const updatedChapters = sub.chapters.map((ch) => (ch.id === chapter.id ? { ...ch, extractedToShadow: true } : ch));
@@ -391,19 +422,19 @@ export default function App() {
         return sub;
       });
       const shadowName = chapter.title + ' Shadow';
-      const power = 100 + chapter.revisionCount * 25;
+      const power = powerForRevisions(srcChapter.revisionCount);
       const newShadow = {
         id: 'sh_' + Date.now(),
         chapterId: chapter.id,
         name: shadowName,
         subjectName,
-        grade: 'Soldier' as const,
+        grade: gradeForRevisions(srcChapter.revisionCount),
         power,
         lastRevisedDate: localDateStr(),
         isDormant: false,
         extractedDate: localDateStr(),
       };
-      setAriseData({ shadowName, subjectName, grade: 'Soldier', power });
+      setAriseData({ shadowName, subjectName, grade: newShadow.grade, power });
       return {
         ...prev,
         subjects: updatedSubjects,
@@ -433,7 +464,7 @@ export default function App() {
   const handleCompleteBoss = (gateId: string) => {
     setData((prev) => {
       const gate = prev.gates.find((g) => g.id === gateId);
-      if (!gate || gate.cleared) return prev;
+      if (!gate || gate.cleared || !gate.steps.every((st) => st.completed)) return prev;
       const updatedGates = prev.gates.map((g) => (g.id === gateId ? { ...g, bossCompleted: true, cleared: true, clearedDate: localDateStr() } : g));
       const nextData = { ...prev, gates: updatedGates };
       showToast('Boss Defeated! Gate Cleared. +' + gate.rewardXp + ' XP & +' + gate.rewardGold + ' Credits');
@@ -471,7 +502,7 @@ export default function App() {
   const handleClaimExpedition = (expId: string) => {
     setData((prev) => {
       const exp = prev.expeditions.find((e) => e.id === expId);
-      if (!exp) return prev;
+      if (!exp || Date.now() - exp.startTime < exp.durationMinutes * 60000) return prev;
       const nextExpeditions = prev.expeditions.filter((e) => e.id !== expId);
       const nextData = { ...prev, expeditions: nextExpeditions };
       showToast(`Expedition successful! Claimed +${exp.rewardXp} XP and +${exp.rewardGold} Gold.`);
@@ -488,10 +519,10 @@ export default function App() {
       const ach = prev.achievements.find((a) => a.id === achievementId);
       if (!ach || ach.claimed) return prev;
 
-      const totalStudyMins = prev.sessions.reduce((acc, s) => acc + s.durationMinutes, 0) + prev.player.todayStudyMinutes;
+      const totalStudyMins = prev.sessions.reduce((acc, s) => acc + s.durationMinutes, 0);
       const shadowCount = prev.shadows.length;
       const gateCount = prev.gates.filter((g) => g.cleared).length;
-      const completedQuestCount = prev.quests.filter((q) => q.completed).length;
+      const completedQuestCount = Math.max(prev.player.questsCompletedTotal || 0, prev.quests.filter((q) => q.completed).length);
       let totalRevisions = 0;
       prev.subjects.forEach((sub) => sub.chapters.forEach((ch) => (totalRevisions += ch.revisionCount)));
 
@@ -568,7 +599,7 @@ export default function App() {
       return {
         ...prev,
         player: { ...prev.player, gold: prev.player.gold - rw.costGold },
-        rewards: prev.rewards.map((r) => (r.id === rewardId ? { ...r, unlocked: true, unlockedDate: localDateStr() } : r)),
+        rewards: prev.rewards.map((r) => (r.id === rewardId ? { ...r, unlocked: true, unlockedAt: Date.now() } : r)),
       };
     });
   };
@@ -684,11 +715,17 @@ export default function App() {
   };
 
   const handleImportData = (imported: AppData) => {
-    setData(imported);
+    setData(normalizeData(imported));
     setTimeout(() => {
       runDailyCheck();
     }, 0);
   };
+
+  let dueRevisionCount = 0;
+  const dueToday = localDateStr();
+  data.subjects.forEach((sub) => sub.chapters.forEach((ch) => {
+    if (ch.learned && ch.nextRevisionDate && ch.nextRevisionDate <= dueToday) dueRevisionCount++;
+  }));
 
   if (isOnboarding) {
     return (
@@ -738,7 +775,7 @@ export default function App() {
       {/* Status Window Modal */}
       {showStatusPopup && (
         <StatusWindowModal
-          player={data.player}
+          player={{ ...data.player, totalRevisionsDue: data.player.todayRevisionsDone + dueRevisionCount }}
           soundEnabled={data.settings.soundEnabled}
           onClose={() => setShowStatusPopup(false)}
           onAllocatePoint={handleAllocatePoint}

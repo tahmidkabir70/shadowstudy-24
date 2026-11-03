@@ -9,7 +9,7 @@ interface Props {
 
 export const InsightsScreen: React.FC<Props> = ({ data }) => {
   const { player, sessions, subjects } = data;
-  const totalMins = sessions.reduce((acc, s) => acc + s.durationMinutes, 0) + player.todayStudyMinutes;
+  const totalMins = sessions.reduce((acc, s) => acc + s.durationMinutes, 0);
   const totalHours = Math.round((totalMins / 60) * 10) / 10;
 
   let totalRevisions = 0;
@@ -27,7 +27,7 @@ export const InsightsScreen: React.FC<Props> = ({ data }) => {
     const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
     const dayMins = sessions
       .filter((s) => s.date === dateStr)
-      .reduce((acc, s) => acc + s.durationMinutes, 0) + (dateStr === todayStr ? player.todayStudyMinutes : 0);
+      .reduce((acc, s) => acc + s.durationMinutes, 0);
     return { dayName, dayMins };
   });
 

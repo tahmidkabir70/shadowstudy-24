@@ -13,10 +13,10 @@ export const AchievementsScreen: React.FC<Props> = ({ data, onClaimAchievement }
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
   // Compute total study minutes
-  const totalStudyMins = data.sessions.reduce((acc, s) => acc + s.durationMinutes, 0) + player.todayStudyMinutes;
+  const totalStudyMins = data.sessions.reduce((acc, s) => acc + s.durationMinutes, 0);
   const shadowCount = shadows.length;
   const gateCount = gates.filter((g) => g.cleared).length;
-  const completedQuestCount = quests.filter((q) => q.completed).length;
+  const completedQuestCount = Math.max(player.questsCompletedTotal || 0, quests.filter((q) => q.completed).length);
   let totalRevisions = 0;
   subjects.forEach((sub) => sub.chapters.forEach((ch) => (totalRevisions += ch.revisionCount)));
 

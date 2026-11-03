@@ -24,3 +24,9 @@ export function addDays(dateStr: string, days: number): string {
   date.setDate(date.getDate() + days);
   return localDateStr(date);
 }
+
+// Season week (1-12) counted from the season start date.
+export function seasonWeek(startDate: string, today: string): number {
+  const days = Math.max(0, daysBetween(startDate, today));
+  return Math.min(12, Math.floor(days / 7) + 1);
+}

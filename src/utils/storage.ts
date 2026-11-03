@@ -1,5 +1,5 @@
 import { Achievement, AppData, AppSettings, Expedition, DailyEvaluation, Gate, NoteItem, PlannerItem, Player, Quest, RewardItem, SeasonData, ShopItem, SkillItem, Subject } from '../types';
-import { localDateStr } from './date';
+import { localDateStr, seasonWeek } from './date';
 
 const STORAGE_KEY = 'SHADOW_STUDY_DATA_V2';
 
@@ -239,10 +239,14 @@ const defaultSeason: SeasonData = {
   seasonName: 'Season I: Awakening of the Shadow',
   active: true,
   bossDefeated: false,
+  startDate: localDateStr(),
 };
 
-function normalizeData(parsed: AppData): AppData {
+export function normalizeData(parsed: AppData): AppData {
   const now = Date.now();
+  const seasonBase = { ...defaultSeason, ...(parsed.season || {}) };
+  const seasonStart = seasonBase.startDate || localDateStr();
+  const season = { ...seasonBase, startDate: seasonStart, currentWeek: seasonWeek(seasonStart, localDateStr()) };
   const rewards = (parsed.rewards || defaultRewards).map((rw) => {
     if (rw.unlocked && rw.unlockedAt && now - rw.unlockedAt > 24 * 60 * 60 * 1000) {
       return { ...rw, unlocked: false, unlockedAt: undefined };
@@ -266,7 +270,7 @@ function normalizeData(parsed: AppData): AppData {
     expeditions: parsed.expeditions || [],
     achievements: parsed.achievements || defaultAchievements,
     evaluations: parsed.evaluations || [],
-    season: parsed.season || defaultSeason,
+    season,
     sessions: parsed.sessions || [],
   };
 }

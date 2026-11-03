@@ -1,4 +1,4 @@
-import { AppData, Rank } from '../types';
+import { AppData, Rank, ShadowGrade } from '../types';
 import { sound } from './sound';
 
 export function calculateXpForNextLevel(level: number): number {
@@ -12,6 +12,19 @@ export function calculateRank(level: number): Rank {
   if (level >= 20) return 'C';
   if (level >= 10) return 'D';
   return 'E';
+}
+
+// Shadow grade and power grow with every revision of its chapter.
+export function gradeForRevisions(count: number): ShadowGrade {
+  if (count >= 12) return 'Marshal';
+  if (count >= 9) return 'Elite Knight';
+  if (count >= 6) return 'Knight';
+  if (count >= 4) return 'Elite';
+  return 'Soldier';
+}
+
+export function powerForRevisions(count: number): number {
+  return 100 + count * 25;
 }
 
 export const INTERVAL_STAGES = [1, 3, 7, 14, 30, 60];

@@ -42,6 +42,7 @@ export interface Player {
   unlockedTitles: string[];
   completedDailySet: boolean;
   lastStatusPopupDate: string;
+  questsCompletedTotal ? : number;
 }
 
 export type QuestType = 'daily' | 'main' | 'side' | 'hidden' | 'comeback' | 'instant' | 'weekly_boss';
@@ -206,6 +207,7 @@ export interface SeasonData {
   seasonName: string;
   active: boolean;
   bossDefeated: boolean;
+  startDate ? : string;
 }
 
 export interface StudySessionLog {
