@@ -1,5 +1,6 @@
 import { Achievement, AppData, AppSettings, Expedition, DailyEvaluation, Gate, NoteItem, PlannerItem, Player, Quest, RewardItem, SeasonData, ShopItem, SkillItem, Subject } from '../types';
 import { localDateStr, seasonWeek } from './date';
+import { defaultVow } from './vow';
 
 const STORAGE_KEY = 'SHADOW_STUDY_DATA_V2';
 
@@ -272,6 +273,7 @@ export function normalizeData(parsed: AppData): AppData {
     evaluations: parsed.evaluations || [],
     season,
     sessions: parsed.sessions || [],
+    vow: parsed.vow ? { ...defaultVow(), ...parsed.vow } : defaultVow(),
   };
 }
 

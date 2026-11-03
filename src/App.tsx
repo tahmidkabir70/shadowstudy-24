@@ -28,9 +28,11 @@ import { ShopScreen } from './components/screens/ShopScreen';
 import { SeasonScreen } from './components/screens/SeasonScreen';
 import { SettingsScreen } from './components/screens/SettingsScreen';
 import { AchievementsScreen } from './components/screens/AchievementsScreen';
+import { VowScreen } from './components/screens/VowScreen';
+import { defaultVow, vowStreakDays, VOW_REWARDS } from './utils/vow';
 import {
   Home, Target, Clock, BookOpen, Ghost, Shield, User,
-  Calendar, FileText, BarChart2, Zap, ShoppingBag, Award, Trophy, Settings as SettingsIcon, Menu, X
+  Calendar, FileText, BarChart2, Zap, ShoppingBag, Award, Trophy, Settings as SettingsIcon, Menu, X, Flame
 } from 'lucide-react';
 
 // Streak: +1 once per local day, on the first XP-earning study action.
@@ -611,6 +613,61 @@ export default function App() {
     }));
   };
 
+  const handleVowBegin = (vowId: string, daysAlready: number) => {
+    setData((prev) => {
+      const v = prev.vow || defaultVow();
+      const start = addDays(localDateStr(), -Math.max(0, daysAlready));
+      return { ...prev, vow: { ...v, vows: v.vows.map((x) => (x.id === vowId ? { ...x, startDate: start } : x)) } };
+    });
+    showToast('Vow begun. Day by day.');
+  };
+
+  const handleVowRelapse = (vowId: string) => {
+    setData((prev) => {
+      const v = prev.vow || defaultVow();
+      const today = localDateStr();
+      return {
+        ...prev,
+        vow: {
+          ...v,
+          vows: v.vows.map((x) =>
+            x.id === vowId
+              ? { ...x, bestStreak: Math.max(x.bestStreak, vowStreakDays(x, today)), startDate: today, relapses: x.relapses + 1 }
+              : x
+          ),
+        },
+      };
+    });
+    showToast('Reset recorded. Your best streak is saved. Start again today.');
+  };
+
+  const handleVowTogglePrivate = () => {
+    setData((prev) => {
+      const v = prev.vow || defaultVow();
+      return { ...prev, vow: { ...v, privateMode: !v.privateMode } };
+    });
+  };
+
+  const handleVowClaim = (vowId: string, days: number) => {
+    setData((prev) => {
+      const v = prev.vow || defaultVow();
+      const target = v.vows.find((x) => x.id === vowId);
+      const reward = VOW_REWARDS[days];
+      if (!target || !reward || !target.startDate || target.claimedMilestones.includes(days)) return prev;
+      if (vowStreakDays(target, localDateStr()) < days) return prev;
+      const nextData = {
+        ...prev,
+        vow: { ...v, vows: v.vows.map((x) => (x.id === vowId ? { ...x, claimedMilestones: [...x.claimedMilestones, days] } : x)) },
+      };
+      showToast(`Vow milestone: ${days} days! +${reward.xp} XP, +${reward.gold} Gold`);
+      const res = addXpAndGold(nextData, reward.xp, reward.gold, showToast);
+      if (res.leveledUp) {
+        setLevelUpData({ oldLevel: res.oldLevel, newLevel: res.newLevel, rank: res.data.player.rank });
+      }
+      return { ...res.data, player: { ...res.data.player, growthPoints: res.data.player.growthPoints + reward.gp } };
+    });
+  };
+
   const handleAddPlanner = (item: PlannerItem) => {
     setData((prev) => ({ ...prev, planner: [item, ...prev.planner] }));
     showToast('Task added to planner.');
@@ -745,6 +802,7 @@ export default function App() {
     { id: 'army', label: t('army', lang), icon: Ghost },
     { id: 'character', label: t('status', lang), icon: User },
     { id: 'achievements', label: 'Achievements', icon: Trophy },
+    { id: 'vow', label: lang === 'bn' ? 'শপথ' : 'Vow', icon: Flame },
     { id: 'planner', label: t('planner', lang), icon: Calendar },
     { id: 'notes', label: t('notes', lang), icon: FileText },
     { id: 'insights', label: t('insights', lang), icon: BarChart2 },
@@ -941,6 +999,7 @@ export default function App() {
         {currentTab === 'army' && <ArmyScreen data={data} onUpdateNickname={handleUpdateNickname} onStartExpedition={handleStartExpedition} onClaimExpedition={handleClaimExpedition} />}
         {currentTab === 'character' && <CharacterScreen data={data} onAllocatePoint={handleAllocatePoint} onSelectPath={handleSelectPath} onUseResilience={handleUseResilience} onUnlockReward={handleUnlockReward} />}
         {currentTab === 'achievements' && <AchievementsScreen data={data} onClaimAchievement={handleClaimAchievement} />}
+        {currentTab === 'vow' && <VowScreen data={data} onNavigate={setCurrentTab} onBegin={handleVowBegin} onRelapse={handleVowRelapse} onClaim={handleVowClaim} onTogglePrivate={handleVowTogglePrivate} />}
         {currentTab === 'planner' && <PlannerScreen data={data} onAddPlanner={handleAddPlanner} onTogglePlanner={handleTogglePlanner} onDeletePlanner={handleDeletePlanner} />}
         {currentTab === 'notes' && <NotesScreen data={data} onAddNote={handleAddNote} onTogglePin={handleTogglePinNote} onDeleteNote={handleDeleteNote} />}
         {currentTab === 'insights' && <InsightsScreen data={data} />}

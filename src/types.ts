@@ -227,6 +227,20 @@ export interface AppSettings {
   soundEnabled: boolean;
 }
 
+export interface VowStreak {
+  id: string;
+  name: string;
+  startDate: string; // empty string = not begun yet
+  bestStreak: number;
+  relapses: number;
+  claimedMilestones: number[];
+}
+
+export interface VowData {
+  privateMode: boolean;
+  vows: VowStreak[];
+}
+
 export interface AppData {
   player: Player;
   quests: Quest[];
@@ -245,4 +259,5 @@ export interface AppData {
   sessions: StudySessionLog[];
   settings: AppSettings;
   lastLoginDate: string;
+  vow ? : VowData;
 }
