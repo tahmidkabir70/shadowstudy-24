@@ -831,10 +831,10 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-[#f8fafc] flex flex-col font-sans selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen bg-[#020205] text-[#f1f5f9] flex flex-col font-sans selection:bg-cyan-500/30 selection:text-white">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-6 right-6 z-50 bg-[#0f172a] border border-blue-500/50 text-blue-200 px-4 py-3 rounded-lg shadow-xl text-xs flex items-center gap-3 animate-fadeIn">
+        <div className="fixed top-6 right-6 z-50 bg-[#0b0b14] border border-cyan-500/40 text-cyan-100 px-5 py-3 rounded-md shadow-[0_0_30px_rgba(0,240,255,0.25)] font-mono text-sm animate-fadeIn">
           <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span>
           {toastMessage}
         </div>
@@ -901,7 +901,7 @@ export default function App() {
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute inset-[-50%] bg-[conic-gradient(from_0deg_at_50%_50%,rgba(6,182,212,0.15),rgba(59,130,246,0.15),rgba(147,51,234,0.15),rgba(6,182,212,0.15))] animate-level-beams"></div>
           </div>
-          <div className="relative z-10 w-full max-w-md bg-gradient-to-b from-slate-900 via-[#0a1128] to-black border-2 border-cyan-400/80 rounded-2xl p-8 shadow-[0_0_50px_rgba(0,229,255,0.5)] text-center animate-level-box system-card space-y-4">
+          <div className="relative bg-gradient-to-b from-[#0c0c16] via-[#08080f] to-black border border-cyan-400/70 rounded-sm p-8 shadow-[0_0_60px_rgba(0,240,255,0.35)] text-center animate-level-box system-card space-y-4 max-w-md w-full mx-4">
             <div className="text-cyan-400 font-mono text-xs tracking-widest uppercase">[ SYSTEM NOTIFICATION ]</div>
             <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-400 to-cyan-100 font-mono tracking-wider">
               LEVEL UP!
@@ -923,7 +923,7 @@ export default function App() {
       )}
 
       {/* Top Header with Hamburger Menu */}
-      <header className="sticky top-0 z-40 bg-[#090d16]/98 backdrop-blur border-b border-slate-800 px-4 lg:px-8 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-40 sl-header px-4 lg:px-8 h-14 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -933,7 +933,7 @@ export default function App() {
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
           <div className="flex items-center space-x-2">
-            <span className="text-blue-400 font-bold text-sm md:text-base tracking-wider uppercase font-mono">[{t('appTitle', lang)}]</span>
+            <span className="text-cyan-400 font-bold text-sm md:text-base tracking-[0.15em] uppercase font-mono">[{t('appTitle', lang)}]</span>
           </div>
         </div>
         <div className="flex items-center space-x-3">
@@ -955,7 +955,7 @@ export default function App() {
             className="fixed inset-0 bg-black/70 backdrop-blur-sm animate-fadeIn"
             onClick={() => setMobileMenuOpen(false)}
           ></div>
-          <div className="relative w-80 max-w-[85vw] bg-[#0f172a] border-r border-slate-800 h-full shadow-2xl flex flex-col z-10 animate-slideRight">
+          <div className="relative w-80 max-w-[85vw] bg-[#07070e] border-r border-cyan-500/15 h-full shadow-2xl flex flex-col z-10 animate-slideRight">
             <div className="p-4 border-b border-slate-800 flex items-center justify-between">
               <div>
                 <div className="text-[10px] font-mono text-blue-400 tracking-widest">SYSTEM DIRECTORY</div>
@@ -1020,7 +1020,7 @@ export default function App() {
       </div>
 
       {/* Bottom Quick Navigation Bar for Android / Mobile */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#090d16]/98 border-t border-slate-800 flex justify-around py-2 px-1 backdrop-blur md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 sl-bottom-nav flex justify-around py-2.5 px-1 md:hidden">
         {bottomNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentTab === item.id;
