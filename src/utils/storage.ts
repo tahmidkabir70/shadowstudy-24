@@ -1,4 +1,8 @@
-import { Achievement, AppData, AppSettings, Expedition, DailyEvaluation, Gate, NoteItem, PlannerItem, Player, Quest, RewardItem, SeasonData, ShopItem, SkillItem, Subject } from '../types';
+
+import {
+  Achievement, AppData, AppSettings, Player, Quest, RewardItem,
+  SeasonData, ShopItem, SkillItem
+} from '../types';
 import { localDateStr, seasonWeek } from './date';
 import { defaultVow } from './vow';
 
@@ -23,24 +27,12 @@ const defaultPlayer: Player = {
   gold: 0,
   growthPoints: 0,
   attributes: {
-    knowledge: 10,
-    focus: 10,
-    discipline: 10,
-    memory: 10,
-    planning: 10,
-    consistency: 10,
-    creativity: 10,
-    vitality: 10,
+    knowledge: 10, focus: 10, discipline: 10, memory: 10,
+    planning: 10, consistency: 10, creativity: 10, vitality: 10,
   },
   attributeGrades: {
-    knowledge: 'F',
-    focus: 'F',
-    discipline: 'F',
-    memory: 'F',
-    planning: 'F',
-    consistency: 'F',
-    creativity: 'F',
-    vitality: 'F',
+    knowledge: 'F', focus: 'F', discipline: 'F', memory: 'F',
+    planning: 'F', consistency: 'F', creativity: 'F', vitality: 'F',
   },
   dailyGoalMinutes: 60,
   todayStudyMinutes: 0,
@@ -110,125 +102,43 @@ const defaultRewards: RewardItem[] = [
 
 function generateAchievements(): Achievement[] {
   const list: Achievement[] = [];
-  let idCounter = 1;
+  let id = 1;
 
-  const timeTargets = [60, 180, 360, 600, 1200, 1800, 3000, 4500, 6000, 9000, 12000, 15000, 21000, 30000, 42000, 60000, 90000, 120000, 180000];
-  timeTargets.forEach((target, idx) => {
-    const tier = idx < 3 ? 'Bronze' : idx < 7 ? 'Silver' : idx < 11 ? 'Gold' : idx < 15 ? 'Platinum' : idx < 18 ? 'Diamond' : 'Monarch';
-    list.push({
-      id: `ach_time_${idCounter++}`,
-      title: `Study Milestone T-${idx + 1}`,
-      description: `Accumulate ${target} total minutes of study time`,
-      category: 'Study Time',
-      tier,
-      targetValue: target,
-      unlocked: false,
-      claimed: false,
-      rewardGold: 20 + idx * 15,
-      rewardGrowthPoints: idx % 4 === 0 ? 1 : undefined,
+  const add = (
+    targets: number[],
+    category: Achievement['category'],
+    title: string,
+    description: (target: number) => string,
+    tierFor: (index: number) => Achievement['tier'],
+    gold: (index: number) => number,
+    growth?: (index: number) => number | undefined
+  ) => {
+    targets.forEach((target, index) => {
+      list.push({
+        id: `ach_${category.toLowerCase().replaceAll(' ', '_')}_${id++}`,
+        title: `${title} T-${index + 1}`,
+        description: description(target),
+        category,
+        tier: tierFor(index),
+        targetValue: target,
+        unlocked: false,
+        claimed: false,
+        rewardGold: gold(index),
+        rewardGrowthPoints: growth?.(index),
+      });
     });
-  });
+  };
 
-  const streakTargets = [3, 7, 14, 21, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300, 365, 450, 540, 730, 900, 1095];
-  streakTargets.forEach((target, idx) => {
-    const tier = idx < 3 ? 'Bronze' : idx < 7 ? 'Silver' : idx < 11 ? 'Gold' : idx < 15 ? 'Platinum' : idx < 18 ? 'Diamond' : 'Monarch';
-    list.push({
-      id: `ach_str_${idCounter++}`,
-      title: `Streak Legend T-${idx + 1}`,
-      description: `Maintain a ${target}-day study streak`,
-      category: 'Discipline',
-      tier,
-      targetValue: target,
-      unlocked: false,
-      claimed: false,
-      rewardGold: 30 + idx * 20,
-      rewardGrowthPoints: idx % 3 === 0 ? 1 : undefined,
-    });
-  });
+  const tier = (i: number): Achievement['tier'] =>
+    i < 3 ? 'Bronze' : i < 7 ? 'Silver' : i < 11 ? 'Gold' : i < 15 ? 'Platinum' : i < 18 ? 'Diamond' : 'Monarch';
 
-  const levelTargets = [5, 8, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 85, 90, 100];
-  levelTargets.forEach((target, idx) => {
-    const tier = idx < 3 ? 'Bronze' : idx < 7 ? 'Silver' : idx < 11 ? 'Gold' : idx < 15 ? 'Platinum' : idx < 18 ? 'Diamond' : 'Monarch';
-    list.push({
-      id: `ach_lvl_${idCounter++}`,
-      title: `Hunter Awakening T-${idx + 1}`,
-      description: `Reach Level ${target}`,
-      category: 'Level',
-      tier,
-      targetValue: target,
-      unlocked: false,
-      claimed: false,
-      rewardGold: 40 + idx * 25,
-      rewardGrowthPoints: 1,
-    });
-  });
-
-  const armyTargets = [3, 5, 8, 12, 16, 20, 25, 30, 40, 50, 60, 75, 90, 110, 130];
-  armyTargets.forEach((target, idx) => {
-    const tier = idx < 3 ? 'Bronze' : idx < 6 ? 'Silver' : idx < 10 ? 'Gold' : idx < 13 ? 'Platinum' : 'Monarch';
-    list.push({
-      id: `ach_arm_${idCounter++}`,
-      title: `Shadow Legion T-${idx + 1}`,
-      description: `Extract ${target} shadows into your army`,
-      category: 'Army',
-      tier,
-      targetValue: target,
-      unlocked: false,
-      claimed: false,
-      rewardGold: 50 + idx * 30,
-      rewardGrowthPoints: idx % 3 === 0 ? 1 : undefined,
-    });
-  });
-
-  const gateTargets = [1, 3, 5, 8, 12, 16, 20, 25, 30, 40, 50, 65, 80, 100, 130];
-  gateTargets.forEach((target, idx) => {
-    const tier = idx < 3 ? 'Bronze' : idx < 6 ? 'Silver' : idx < 10 ? 'Gold' : idx < 13 ? 'Platinum' : 'Monarch';
-    list.push({
-      id: `ach_gate_${idCounter++}`,
-      title: `Gate Conqueror T-${idx + 1}`,
-      description: `Clear ${target} Dungeon Gates`,
-      category: 'Gates',
-      tier,
-      targetValue: target,
-      unlocked: false,
-      claimed: false,
-      rewardGold: 50 + idx * 30,
-      rewardGrowthPoints: idx % 3 === 0 ? 1 : undefined,
-    });
-  });
-
-  const revTargets = [5, 15, 30, 50, 80, 120, 180, 250, 350, 500, 700, 900, 1200, 1600, 2000];
-  revTargets.forEach((target, idx) => {
-    const tier = idx < 3 ? 'Bronze' : idx < 6 ? 'Silver' : idx < 10 ? 'Gold' : idx < 13 ? 'Platinum' : 'Monarch';
-    list.push({
-      id: `ach_rev_${idCounter++}`,
-      title: `Archive Master T-${idx + 1}`,
-      description: `Complete ${target} Spaced Revisions`,
-      category: 'Knowledge',
-      tier,
-      targetValue: target,
-      unlocked: false,
-      claimed: false,
-      rewardGold: 40 + idx * 25,
-      rewardGrowthPoints: idx % 4 === 0 ? 1 : undefined,
-    });
-  });
-
-  const questTargets = [5, 15, 30, 60, 100, 150, 250, 400, 600, 900, 1300, 2000];
-  questTargets.forEach((target, idx) => {
-    const tier = idx < 3 ? 'Bronze' : idx < 6 ? 'Silver' : idx < 9 ? 'Gold' : 'Platinum';
-    list.push({
-      id: `ach_qst_${idCounter++}`,
-      title: `Quest Master T-${idx + 1}`,
-      description: `Complete ${target} Quests`,
-      category: 'Quests',
-      tier,
-      targetValue: target,
-      unlocked: false,
-      claimed: false,
-      rewardGold: 35 + idx * 20,
-    });
-  });
+  add([60,180,360,600,1200,1800,3000,4500,6000,9000,12000,15000,21000,30000,42000,60000,90000,120000,180000], 'Study Time', 'Study Milestone', n => `Accumulate ${n} total minutes of study time`, tier, i => 20 + i * 15, i => i % 4 === 0 ? 1 : undefined);
+  add([3,7,14,21,30,45,60,75,90,120,150,180,240,300,365,450,540,730,900,1095], 'Discipline', 'Streak Legend', n => `Maintain a ${n}-day study streak`, tier, i => 30 + i * 20, i => i % 3 === 0 ? 1 : undefined);
+  add([5,8,10,15,20,25,30,35,40,45,50,55,60,65,70,75,85,90,100], 'Level', 'Hunter Awakening', n => `Reach Level ${n}`, tier, i => 40 + i * 25, () => 1);
+  add([3,5,8,12,16,20,25,30,40,50,60,75,90,110,130], 'Army', 'Shadow Legion', n => `Extract ${n} shadows into your army`, tier, i => 50 + i * 30, i => i % 3 === 0 ? 1 : undefined);
+  add([1,3,5,8,12,16,20,25,30,40,50,65,80,100,130], 'Gates', 'Gate Conqueror', n => `Clear ${n} Dungeon Gates`, tier, i => 50 + i * 30, i => i % 3 === 0 ? 1 : undefined);
+  add([5,15,30,50,80,120,180,250,350,500,700,900,1200,1600,2000], 'Knowledge', 'Archive Master', n => `Complete ${n} Spaced Revisions`, tier, i => 40 + i * 25, i => i % 4 === 0 ? 1 : undefined);
+  add([5,15,30,60,100,150,250,400,600,900,1300,2000], 'Quests', 'Quest Master', n => `Complete ${n} Quests`, i => i < 3 ? 'Bronze' : i < 6 ? 'Silver' : i < 9 ? 'Gold' : 'Platinum', i => 35 + i * 20);
 
   return list;
 }
@@ -243,95 +153,150 @@ const defaultSeason: SeasonData = {
   startDate: localDateStr(),
 };
 
-// Keep already-claimed achievements; unclaimed ones take the current (harder) definitions.
-function mergeAchievements(saved?: Achievement[]): Achievement[] {
-  if (!saved) return defaultAchievements;
-  const claimed = new Map(saved.filter((a) => a.claimed).map((a) => [a.id, a] as [string, Achievement]));
-  return defaultAchievements.map((a) => claimed.get(a.id) || a);
+function isRecord(value: unknown): value is Record<string, any> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export function normalizeData(parsed: AppData): AppData {
-  const now = Date.now();
-  const seasonBase = { ...defaultSeason, ...(parsed.season || {}) };
-  const seasonStart = seasonBase.startDate || localDateStr();
-  const season = { ...seasonBase, startDate: seasonStart, currentWeek: seasonWeek(seasonStart, localDateStr()) };
-  const rewards = (parsed.rewards || defaultRewards).map((rw) => {
-    if (rw.unlocked && rw.unlockedAt && now - rw.unlockedAt > 24 * 60 * 60 * 1000) {
-      return { ...rw, unlocked: false, unlockedAt: undefined };
+function isArray(value: unknown): value is any[] {
+  return Array.isArray(value);
+}
+
+function mergeAchievements(saved: unknown): Achievement[] {
+  if (!isArray(saved)) return defaultAchievements;
+
+  const claimed = new Map<string, Achievement>();
+
+  saved.forEach((item) => {
+    if (isRecord(item) && typeof item.id === 'string' && item.claimed === true) {
+      claimed.set(item.id, item as unknown as Achievement);
     }
-    return rw;
   });
+
+  return defaultAchievements.map((achievement) => claimed.get(achievement.id) || achievement);
+}
+
+export function normalizeData(input: AppData): AppData {
+  const parsed = isRecord(input) ? input : {};
+  const playerInput = isRecord(parsed.player) ? parsed.player : {};
+  const attributesInput = isRecord(playerInput.attributes) ? playerInput.attributes : {};
+  const gradesInput = isRecord(playerInput.attributeGrades) ? playerInput.attributeGrades : {};
+
+  const player: Player = {
+    ...defaultPlayer,
+    ...playerInput,
+    attributes: {
+      ...defaultPlayer.attributes,
+      ...attributesInput,
+    },
+    attributeGrades: {
+      ...defaultPlayer.attributeGrades,
+      ...gradesInput,
+    },
+    activePassives: isArray(playerInput.activePassives) ? playerInput.activePassives : [],
+    unlockedSkills: isArray(playerInput.unlockedSkills) ? playerInput.unlockedSkills : [],
+    unlockedTitles: isArray(playerInput.unlockedTitles) ? playerInput.unlockedTitles : ['The Weakest Player'],
+  };
+
+  const settings: AppSettings = {
+    ...defaultSettings,
+    ...(isRecord(parsed.settings) ? parsed.settings : {}),
+  };
+
+  const seasonBase = {
+    ...defaultSeason,
+    ...(isRecord(parsed.season) ? parsed.season : {}),
+  };
+
+  const seasonStart = typeof seasonBase.startDate === 'string' && seasonBase.startDate
+    ? seasonBase.startDate
+    : localDateStr();
+
+  const season: SeasonData = {
+    ...seasonBase,
+    startDate: seasonStart,
+    currentWeek: seasonWeek(seasonStart, localDateStr()),
+  };
+
+  const rewardsInput = isArray(parsed.rewards) ? parsed.rewards : defaultRewards;
+  const rewards = rewardsInput.filter(isRecord).map((reward) => {
+    if (
+      reward.unlocked === true &&
+      typeof reward.unlockedAt === 'number' &&
+      Date.now() - reward.unlockedAt > 24 * 60 * 60 * 1000
+    ) {
+      return { ...reward, unlocked: false, unlockedAt: undefined };
+    }
+    return reward;
+  }) as RewardItem[];
 
   return {
     ...parsed,
-    player: { ...defaultPlayer, ...(parsed.player || {}) },
-    settings: { ...defaultSettings, ...(parsed.settings || {}) },
-    quests: parsed.quests || defaultQuests,
-    subjects: parsed.subjects || [],
-    shadows: parsed.shadows || [],
-    gates: parsed.gates || [],
-    planner: parsed.planner || [],
-    notes: parsed.notes || [],
-    shop: parsed.shop || defaultShop,
-    skills: parsed.skills || defaultSkills,
+    player,
+    settings,
+    quests: isArray(parsed.quests) ? parsed.quests as Quest[] : defaultQuests,
+    subjects: isArray(parsed.subjects) ? parsed.subjects : [],
+    shadows: isArray(parsed.shadows) ? parsed.shadows : [],
+    gates: isArray(parsed.gates) ? parsed.gates : [],
+    planner: isArray(parsed.planner) ? parsed.planner : [],
+    notes: isArray(parsed.notes) ? parsed.notes : [],
+    shop: isArray(parsed.shop) ? parsed.shop as ShopItem[] : defaultShop,
+    skills: isArray(parsed.skills) ? parsed.skills as SkillItem[] : defaultSkills,
     rewards,
-    expeditions: parsed.expeditions || [],
+    expeditions: isArray(parsed.expeditions) ? parsed.expeditions : [],
     achievements: mergeAchievements(parsed.achievements),
-    evaluations: parsed.evaluations || [],
+    evaluations: isArray(parsed.evaluations) ? parsed.evaluations : [],
     season,
-    sessions: parsed.sessions || [],
-    vow: parsed.vow ? { ...defaultVow(), ...parsed.vow } : defaultVow(),
+    sessions: isArray(parsed.sessions) ? parsed.sessions : [],
+    lastLoginDate: typeof parsed.lastLoginDate === 'string' ? parsed.lastLoginDate : localDateStr(),
+    vow: isRecord(parsed.vow) ? { ...defaultVow(), ...parsed.vow } : defaultVow(),
+  } as AppData;
+}
+
+function createInitialData(): AppData {
+  return {
+    player: defaultPlayer,
+    quests: defaultQuests,
+    subjects: [],
+    shadows: [],
+    gates: [],
+    planner: [],
+    notes: [],
+    shop: defaultShop,
+    skills: defaultSkills,
+    rewards: defaultRewards,
+    expeditions: [],
+    achievements: defaultAchievements,
+    evaluations: [],
+    season: defaultSeason,
+    sessions: [],
+    settings: defaultSettings,
+    lastLoginDate: localDateStr(),
+    vow: defaultVow(),
   };
 }
 
 export function loadAppData(): AppData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
+
     if (!raw) {
-      const initial: AppData = {
-        player: defaultPlayer,
-        quests: defaultQuests,
-        subjects: [],
-        shadows: [],
-        gates: [],
-        planner: [],
-        notes: [],
-        shop: defaultShop,
-        skills: defaultSkills,
-        rewards: defaultRewards,
-        expeditions: [],
-        achievements: defaultAchievements,
-        evaluations: [],
-        season: defaultSeason,
-        sessions: [],
-        settings: defaultSettings,
-        lastLoginDate: localDateStr(),
-      };
+      const initial = createInitialData();
       saveAppData(initial);
       return initial;
     }
-    const parsed: AppData = JSON.parse(raw);
-    return normalizeData(parsed);
+
+    const parsed: unknown = JSON.parse(raw);
+
+    if (!isRecord(parsed)) {
+      const fallback = createInitialData();
+      saveAppData(fallback);
+      return fallback;
+    }
+
+    return normalizeData(parsed as unknown as AppData);
   } catch {
-    const fallback: AppData = {
-      player: defaultPlayer,
-      quests: defaultQuests,
-      subjects: [],
-      shadows: [],
-      gates: [],
-      planner: [],
-      notes: [],
-      shop: defaultShop,
-      skills: defaultSkills,
-      rewards: defaultRewards,
-      expeditions: [],
-      achievements: defaultAchievements,
-      evaluations: [],
-      season: defaultSeason,
-      sessions: [],
-      settings: defaultSettings,
-      lastLoginDate: localDateStr(),
-    };
+    const fallback = createInitialData();
+    saveAppData(fallback);
     return fallback;
   }
 }
@@ -340,7 +305,7 @@ export function saveAppData(data: AppData) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch {
-    // ignore
+    // Storage may be unavailable or full.
   }
 }
 
@@ -356,13 +321,19 @@ export function exportBackup(data: AppData) {
 
 export function importBackup(jsonString: string): AppData | null {
   try {
-    const parsed = JSON.parse(jsonString);
-    if (parsed && parsed.player && parsed.quests) {
-      const normalized = normalizeData(parsed as AppData);
-      saveAppData(normalized);
-      return normalized;
+    const parsed: unknown = JSON.parse(jsonString);
+
+    if (
+      !isRecord(parsed) ||
+      !isRecord(parsed.player) ||
+      !Array.isArray(parsed.quests)
+    ) {
+      return null;
     }
-    return null;
+
+    const normalized = normalizeData(parsed as unknown as AppData);
+    saveAppData(normalized);
+    return normalized;
   } catch {
     return null;
   }
