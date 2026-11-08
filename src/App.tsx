@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -7,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { AppData, AppSettings, Chapter, Gate, JobPath, NoteItem, PlannerItem, Player, Quest, Shadow, ShopItem, Subject } from './types';
 import { loadAppData, saveAppData, normalizeData } from './utils/storage';
 import { addXpAndGold, getNextRevisionDays, calculateRank, gradeForRevisions, powerForRevisions } from './utils/gameLogic';
+import { rollExamReward, getDuplicateReward } from './utils/examRewards';
 import { localDateStr, daysBetween, addDays, seasonWeek } from './utils/date';
 import { sound } from './utils/sound';
 import { t } from './utils/i18n';
@@ -451,6 +453,151 @@ export default function App() {
     });
   };
 
+  // Mark a chapter as exam-completed and unlock its one-time ARISE reward.
+  const handleExamComplete = (chapterId: string) => {
+    const chapterExists = data.subjects.some((subject) =>
+      subject.chapters.some((chapter) => chapter.id === chapterId)
+    );
+
+    if (!chapterExists) return;
+
+    setData((prev) => {
+      const alreadyCompleted = prev.subjects.some((subject) =>
+        subject.chapters.some((chapter) => chapter.id === chapterId && chapter.examCompleted)
+      );
+
+      if (alreadyCompleted) return prev;
+
+      const updatedSubjects = prev.subjects.map((subject) => ({
+        ...subject,
+        chapters: subject.chapters.map((chapter) =>
+          chapter.id === chapterId
+            ? { ...chapter, examCompleted: true }
+            : chapter
+        ),
+      }));
+
+      return { ...prev, subjects: updatedSubjects };
+    });
+
+    const alreadyCompleted = data.subjects.some((subject) =>
+      subject.chapters.some((chapter) => chapter.id === chapterId && chapter.examCompleted)
+    );
+
+    if (!alreadyCompleted) {
+      showToast('Chapter completed. ARISE reward unlocked!');
+    }
+  };
+
+  // Claim one ARISE reward per completed chapter.
+  const handleClaimExamReward = (chapterId: string) => {
+    const sourceSubject = data.subjects.find((subject) =>
+      subject.chapters.some((chapter) =>
+        chapter.id === chapterId && chapter.examCompleted && !chapter.examAriseClaimed
+      )
+    );
+
+    if (!sourceSubject) return;
+
+    // Roll once outside the state updater so repeated updater calls cannot reroll.
+    const reward = rollExamReward();
+    const newShadowId = 'exam_sh_' + Date.now();
+    const today = localDateStr();
+
+    setData((prev) => {
+      const subject = prev.subjects.find((item) =>
+        item.chapters.some((chapter) =>
+          chapter.id === chapterId && chapter.examCompleted && !chapter.examAriseClaimed
+        )
+      );
+
+      if (!subject) return prev;
+
+      const updatedSubjects = prev.subjects.map((item) => ({
+        ...item,
+        chapters: item.chapters.map((chapter) =>
+          chapter.id === chapterId
+            ? { ...chapter, examAriseClaimed: true }
+            : chapter
+        ),
+      }));
+
+      const nextData: AppData = {
+        ...prev,
+        subjects: updatedSubjects,
+      };
+
+      // 50% chance: points only.
+      if (reward.type === 'points') {
+        const result = addXpAndGold(nextData, reward.xp, reward.gold, showToast);
+
+        if (result.leveledUp) {
+          setLevelUpData({
+            oldLevel: result.oldLevel,
+            newLevel: result.newLevel,
+            rank: result.data.player.rank,
+          });
+        }
+
+        showToast(`ARISE Reward: +${reward.xp} XP & +${reward.gold} Gold!`);
+        return result.data;
+      }
+
+      // Check whether this exact member already exists in the Army.
+      const duplicateExists = prev.shadows.some(
+        (shadow) => shadow.name === reward.name && shadow.rank === reward.rank
+      );
+
+      // Duplicate members convert into bonus XP and Gold.
+      if (duplicateExists) {
+        const bonus = getDuplicateReward();
+        const result = addXpAndGold(nextData, bonus.xp, bonus.gold, showToast);
+
+        if (result.leveledUp) {
+          setLevelUpData({
+            oldLevel: result.oldLevel,
+            newLevel: result.newLevel,
+            rank: result.data.player.rank,
+          });
+        }
+
+        showToast(
+          `Duplicate ${reward.rank}-Rank Shadow! +${bonus.xp} XP & +${bonus.gold} Gold.`
+        );
+
+        return result.data;
+      }
+
+      // Add a newly summoned Army Member.
+      const newShadow: Shadow = {
+        id: newShadowId,
+        chapterId,
+        name: reward.name,
+        subjectName: subject.name,
+        grade: reward.grade,
+        power: reward.power,
+        lastRevisedDate: today,
+        isDormant: false,
+        extractedDate: today,
+        rank: reward.rank,
+      };
+
+      setAriseData({
+        shadowName: reward.name,
+        subjectName: subject.name,
+        grade: `${reward.rank}-RANK`,
+        power: reward.power,
+      });
+
+      showToast(`${reward.rank}-Rank Army Member summoned!`);
+
+      return {
+        ...nextData,
+        shadows: [newShadow, ...prev.shadows],
+      };
+    });
+  };
+
   const handleAddGate = (gate: Gate) => {
     setData((prev) => ({ ...prev, gates: [gate, ...prev.gates] }));
     showToast('New Dungeon Gate opened.');
@@ -771,8 +918,6 @@ export default function App() {
     showToast('System settings updated.');
   };
 
-
-
   const handleResetData = () => {
     localStorage.removeItem('SHADOW_STUDY_DATA_V2');
     localStorage.removeItem('SHADOW_STUDY_WELCOME_DONE');
@@ -1004,7 +1149,18 @@ export default function App() {
         {currentTab === 'today' && <TodayScreen data={data} onNavigate={setCurrentTab} onCompleteQuest={handleCompleteQuest} onOpenStatus={() => setShowStatusPopup(true)} />}
         {currentTab === 'quests' && <QuestsScreen data={data} onCompleteQuest={handleCompleteQuest} onAddQuest={handleAddQuest} onDeleteQuest={handleDeleteQuest} />}
         {currentTab === 'focus' && <FocusScreen data={data} onFinishSession={handleFinishFocusSession} />}
-        {currentTab === 'learn' && <LearnScreen data={data} onAddSubject={handleAddSubject} onAddChapter={handleAddChapter} onMarkLearned={handleMarkLearned} onReviewChapter={handleReviewChapter} onExtractShadow={handleExtractShadow} />}
+        {currentTab === 'learn' && (
+          <LearnScreen
+            data={data}
+            onAddSubject={handleAddSubject}
+            onAddChapter={handleAddChapter}
+            onMarkLearned={handleMarkLearned}
+            onReviewChapter={handleReviewChapter}
+            onExtractShadow={handleExtractShadow}
+            onExamComplete={handleExamComplete}
+            onClaimExamReward={handleClaimExamReward}
+          />
+        )}
         {currentTab === 'gates' && <GatesScreen data={data} onAddGate={handleAddGate} onToggleGateStep={handleToggleGateStep} onCompleteBoss={handleCompleteBoss} onTriggerDoubleDungeon={setDoubleDungeonTitle} />}
         {currentTab === 'army' && <ArmyScreen data={data} onUpdateNickname={handleUpdateNickname} onStartExpedition={handleStartExpedition} onClaimExpedition={handleClaimExpedition} />}
         {currentTab === 'character' && <CharacterScreen data={data} onAllocatePoint={handleAllocatePoint} onSelectPath={handleSelectPath} onUseResilience={handleUseResilience} onUnlockReward={handleUnlockReward} />}

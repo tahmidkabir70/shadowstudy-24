@@ -45,7 +45,15 @@ export interface Player {
   questsCompletedTotal ? : number;
 }
 
-export type QuestType = 'daily' | 'main' | 'side' | 'hidden' | 'comeback' | 'instant' | 'weekly_boss';
+export type QuestType = |
+  'daily' |
+  'main' |
+  'side' |
+  'hidden' |
+  'comeback' |
+  'instant' |
+  'weekly_boss';
+
 export type QuestDifficulty = 'easy' | 'medium' | 'hard';
 
 export interface Quest {
@@ -71,8 +79,12 @@ export interface Chapter {
   revisionCount: number;
   nextRevisionDate ? : string;
   lastRevisionDate ? : string;
-  intervalStage: number; // 0, 1(1d), 2(3d), 3(7d), 4(14d), 5(30d), 6(60d)
+  intervalStage: number;
   extractedToShadow: boolean;
+  
+  // Exam Time system
+  examCompleted ? : boolean;
+  examAriseClaimed ? : boolean;
 }
 
 export interface Subject {
@@ -82,7 +94,12 @@ export interface Subject {
   chapters: Chapter[];
 }
 
-export type ShadowGrade = 'Soldier' | 'Elite' | 'Knight' | 'Elite Knight' | 'Marshal';
+export type ShadowGrade = |
+  'Soldier' |
+  'Elite' |
+  'Knight' |
+  'Elite Knight' |
+  'Marshal';
 
 export interface Shadow {
   id: string;
@@ -95,6 +112,9 @@ export interface Shadow {
   lastRevisedDate: string;
   isDormant: boolean;
   extractedDate: string;
+  
+  // Exam Time Army Rank
+  rank ? : Rank;
 }
 
 export type GateRank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S';
@@ -179,13 +199,27 @@ export interface Expedition {
   completed: boolean;
 }
 
-export type AchievementTier = 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond' | 'Monarch';
+export type AchievementTier = |
+  'Bronze' |
+  'Silver' |
+  'Gold' |
+  'Platinum' |
+  'Diamond' |
+  'Monarch';
 
 export interface Achievement {
   id: string;
   title: string;
   description: string;
-  category: 'Study Time' | 'Discipline' | 'Level' | 'Army' | 'Gates' | 'Knowledge' | 'Quests';
+  category:
+    |
+    'Study Time' |
+    'Discipline' |
+    'Level' |
+    'Army' |
+    'Gates' |
+    'Knowledge' |
+    'Quests';
   tier: AchievementTier;
   targetValue: number;
   unlocked: boolean;
@@ -230,7 +264,7 @@ export interface AppSettings {
 export interface VowStreak {
   id: string;
   name: string;
-  startDate: string; // empty string = not begun yet
+  startDate: string;
   bestStreak: number;
   relapses: number;
   claimedMilestones: number[];
