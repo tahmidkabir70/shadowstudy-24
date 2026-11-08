@@ -81,7 +81,7 @@ function isNicknameTaken(shadows: Shadow[], nickname: string, excludeShadowId: s
 // Exam Time lottery
 // ---------------------------------------------------------------------------
 
-const EXAM_EXTRACTION_CHANCE = 0.05; // 5% Shadow Extraction
+const EXAM_EXTRACTION_CHANCE = 0.15; // 5% Shadow Extraction
 const EXAM_NO_EXTRACTION_XP = 40;
 const EXAM_NO_EXTRACTION_GOLD = 20;
 const EXAM_LOW_LUCK_COUNT = 4;
