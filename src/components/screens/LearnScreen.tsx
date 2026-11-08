@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AppData, Chapter } from '../../types';
 import { localDateStr } from '../../utils/date';
@@ -8,6 +9,7 @@ interface Props {
   data: AppData;
   onAddSubject: (name: string) => string;
   onAddChapter: (subjectId: string, title: string) => void;
+  onAddExamChapter: (subjectId: string, title: string) => void;
   onMarkLearned: (subjectId: string, chapterId: string) => void;
   onReviewChapter: (
     subjectId: string,
@@ -23,6 +25,7 @@ export const LearnScreen: React.FC<Props> = ({
   data,
   onAddSubject,
   onAddChapter,
+  onAddExamChapter,
   onMarkLearned,
   onReviewChapter,
   onExtractShadow,
@@ -71,17 +74,14 @@ export const LearnScreen: React.FC<Props> = ({
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
-      {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-6">
         <div>
           <div className="text-xs font-mono text-cyan-400 tracking-widest">
             [ KNOWLEDGE REPOSITORY ]
           </div>
-
           <h1 className="text-2xl font-bold font-mono text-white mt-1">
             Subjects & Spaced Revisions
           </h1>
-
           <p className="text-xs font-mono text-cyan-300 mt-0.5">
             Master chapters and unlock Shadow Army extractions.
           </p>
@@ -94,7 +94,6 @@ export const LearnScreen: React.FC<Props> = ({
           >
             <Plus className="w-4 h-4" /> Add Subject
           </button>
-
           <button
             onClick={openAddChapter}
             className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs uppercase px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all cursor-pointer"
@@ -104,20 +103,16 @@ export const LearnScreen: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Empty state */}
       {data.subjects.length === 0 && (
         <div className="bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-8 text-center space-y-4">
           <BookOpen className="w-10 h-10 text-cyan-400 mx-auto" />
-
           <div className="text-white font-mono font-bold text-base">
             No subjects yet
           </div>
-
           <p className="text-xs font-mono text-cyan-300/80">
             Add your first subject (for example Physics or Mathematics) to
             start adding chapters.
           </p>
-
           <button
             onClick={() => setShowSubModal(true)}
             className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs uppercase px-5 py-2.5 rounded-xl font-bold cursor-pointer"
@@ -127,7 +122,6 @@ export const LearnScreen: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Subject Tabs */}
       {data.subjects.length > 0 && (
         <div className="flex overflow-x-auto gap-2 pb-2">
           {data.subjects.map((sub) => (
@@ -146,7 +140,6 @@ export const LearnScreen: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Chapters List */}
       {activeSub && (
         <div className="bg-slate-900/90 border border-cyan-500/30 rounded-2xl p-6 shadow-lg space-y-4">
           <h2 className="text-sm font-mono text-cyan-400 tracking-wider mb-2">
@@ -232,7 +225,6 @@ export const LearnScreen: React.FC<Props> = ({
                             >
                               Hard
                             </button>
-
                             <button
                               onClick={() =>
                                 onReviewChapter(activeSub.id, ch.id, 'good')
@@ -242,7 +234,6 @@ export const LearnScreen: React.FC<Props> = ({
                             >
                               Good
                             </button>
-
                             <button
                               onClick={() =>
                                 onReviewChapter(activeSub.id, ch.id, 'easy')
@@ -279,14 +270,13 @@ export const LearnScreen: React.FC<Props> = ({
         </div>
       )}
 
-      {/* EXAM TIME */}
       <ExamTimeSection
         subjects={data.subjects}
+        onAddExamChapter={onAddExamChapter}
         onComplete={onExamComplete}
         onClaim={onClaimExamReward}
       />
 
-      {/* Add Subject Modal */}
       {showSubModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fadeIn">
           <div className="w-full max-w-md bg-slate-900 border-2 border-cyan-500 rounded-2xl p-6 shadow-[0_0_30px_rgba(6,182,212,0.3)]">
@@ -302,7 +292,6 @@ export const LearnScreen: React.FC<Props> = ({
                 <label className="text-cyan-400 block mb-1">
                   Subject Name
                 </label>
-
                 <input
                   type="text"
                   value={newSubName}
@@ -321,7 +310,6 @@ export const LearnScreen: React.FC<Props> = ({
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
                   className="px-6 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow cursor-pointer"
@@ -334,7 +322,6 @@ export const LearnScreen: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Add Chapter Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fadeIn">
           <div className="w-full max-w-md bg-slate-900 border-2 border-cyan-500 rounded-2xl p-6 shadow-[0_0_30px_rgba(6,182,212,0.3)]">
@@ -356,7 +343,6 @@ export const LearnScreen: React.FC<Props> = ({
                 <label className="text-cyan-400 block mb-1">
                   Chapter Title
                 </label>
-
                 <input
                   type="text"
                   value={newChapTitle}
@@ -375,7 +361,6 @@ export const LearnScreen: React.FC<Props> = ({
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
                   className="px-6 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shadow cursor-pointer"
