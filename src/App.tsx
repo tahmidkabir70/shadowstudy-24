@@ -4,9 +4,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { AppData, AppSettings, Chapter, Gate, JobPath, NoteItem, PlannerItem, Player, Quest, Shadow, ShopItem, Subject } from './types';
+import { AppData, AppSettings, Chapter, ExamChapter, Gate, JobPath, NoteItem, PlannerItem, Player, Quest, Shadow, ShopItem, Subject } from './types';
 import { loadAppData, saveAppData, normalizeData } from './utils/storage';
 import { addXpAndGold, getNextRevisionDays, calculateRank, gradeForRevisions, powerForRevisions } from './utils/gameLogic';
+import { rollExamReward, getDuplicateReward } from './utils/examRewards';
 import { localDateStr, daysBetween, addDays, seasonWeek } from './utils/date';
 import { sound } from './utils/sound';
 import { t } from './utils/i18n';
@@ -53,8 +54,18 @@ function applyStudyStreak(data: AppData, today: string): { data: AppData; toastS
   };
 }
 
+// Data safety: old saved subjects may not have "examChapters". Fall back to [].
+function ensureExamChapters(d: AppData): AppData {
+  return {
+    ...d,
+    subjects: d.subjects.map((sub) =>
+      Array.isArray(sub.examChapters) ? sub : { ...sub, examChapters: [] }
+    ),
+  };
+}
+
 export default function App() {
-  const [data, setData] = useState<AppData>(loadAppData);
+  const [data, setData] = useState<AppData>(() => ensureExamChapters(loadAppData()));
   const [currentTab, setCurrentTab] = useState<string>('today');
   const [showStatusPopup, setShowStatusPopup] = useState<boolean>(false);
   const [ariseData, setAriseData] = useState<{ shadowName: string; subjectName: string; grade: string; power: number } | null>(null);
@@ -287,6 +298,8 @@ export default function App() {
     });
   };
 
+  // Subject Sync: one shared subjects list. A subject added in Learn is automatically
+  // visible in Exam Time. Every new subject starts with its own empty examChapters list.
   const handleAddSubject = (name: string): string => {
     const id = 'sub_' + Date.now();
     const colors = ['#06b6d4', '#a855f7', '#22c55e', '#f59e0b', '#ef4444', '#3b82f6'];
@@ -296,6 +309,7 @@ export default function App() {
         name: name.trim(),
         color: colors[prev.subjects.length % colors.length],
         chapters: [],
+        examChapters: [],
       };
       return { ...prev, subjects: [...prev.subjects, newSub] };
     });
@@ -303,6 +317,7 @@ export default function App() {
     return id;
   };
 
+  // Learn chapters only. These never appear in Exam Time.
   const handleAddChapter = (subjectId: string, title: string) => {
     setData((prev) => {
       const updatedSubjects = prev.subjects.map((sub) => {
@@ -323,6 +338,31 @@ export default function App() {
       return { ...prev, subjects: updatedSubjects };
     });
     showToast('Chapter registered.');
+  };
+
+  // Exam Chapter Add: saved only into subject.examChapters, separate from Learn chapters.
+  const handleAddExamChapter = (subjectId: string, title: string) => {
+    const cleanTitle = title.trim();
+    if (!cleanTitle) return;
+    const newExamCh: ExamChapter = {
+      id: 'exam_ch_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+      subjectId,
+      title: cleanTitle,
+      examCompleted: false,
+      examAriseClaimed: false,
+    };
+    setData((prev) => {
+      if (!prev.subjects.some((sub) => sub.id === subjectId)) return prev;
+      return {
+        ...prev,
+        subjects: prev.subjects.map((sub) =>
+          sub.id === subjectId
+            ? { ...sub, examChapters: [...(sub.examChapters || []), newExamCh] }
+            : sub
+        ),
+      };
+    });
+    showToast('Exam chapter registered.');
   };
 
   const handleMarkLearned = (subjectId: string, chapterId: string) => {
@@ -446,6 +486,147 @@ export default function App() {
       return {
         ...prev,
         subjects: updatedSubjects,
+        shadows: [newShadow, ...prev.shadows],
+      };
+    });
+  };
+
+  // Exam Complete: only the matching entry in subject.examChapters is changed.
+  // Learn chapters (subject.chapters) are never touched here.
+  const handleExamComplete = (chapterId: string) => {
+    const target = data.subjects
+      .flatMap((subject) => subject.examChapters || [])
+      .find((chapter) => chapter.id === chapterId);
+
+    if (!target || target.examCompleted) return;
+
+    setData((prev) => {
+      const alreadyCompleted = prev.subjects.some((subject) =>
+        (subject.examChapters || []).some((chapter) => chapter.id === chapterId && chapter.examCompleted)
+      );
+
+      if (alreadyCompleted) return prev;
+
+      const updatedSubjects = prev.subjects.map((subject) => ({
+        ...subject,
+        examChapters: (subject.examChapters || []).map((chapter) =>
+          chapter.id === chapterId
+            ? { ...chapter, examCompleted: true }
+            : chapter
+        ),
+      }));
+
+      return { ...prev, subjects: updatedSubjects };
+    });
+
+    showToast('Chapter completed. ARISE reward unlocked!');
+  };
+
+  // ARISE Reward: one claim per completed exam chapter, guarded by examAriseClaimed.
+  const handleClaimExamReward = (chapterId: string) => {
+    const sourceSubject = data.subjects.find((subject) =>
+      (subject.examChapters || []).some((chapter) =>
+        chapter.id === chapterId && chapter.examCompleted && !chapter.examAriseClaimed
+      )
+    );
+
+    if (!sourceSubject) return;
+
+    // Roll once outside the state updater so repeated updater calls cannot reroll.
+    const reward = rollExamReward();
+    const newShadowId = 'exam_sh_' + Date.now();
+    const today = localDateStr();
+
+    setData((prev) => {
+      const subject = prev.subjects.find((item) =>
+        (item.examChapters || []).some((chapter) =>
+          chapter.id === chapterId && chapter.examCompleted && !chapter.examAriseClaimed
+        )
+      );
+
+      // Already claimed (or not completed): block duplicate claim.
+      if (!subject) return prev;
+
+      const updatedSubjects = prev.subjects.map((item) => ({
+        ...item,
+        examChapters: (item.examChapters || []).map((chapter) =>
+          chapter.id === chapterId
+            ? { ...chapter, examAriseClaimed: true }
+            : chapter
+        ),
+      }));
+
+      const nextData: AppData = {
+        ...prev,
+        subjects: updatedSubjects,
+      };
+
+      // 50% chance: points only.
+      if (reward.type === 'points') {
+        const result = addXpAndGold(nextData, reward.xp, reward.gold, showToast);
+
+        if (result.leveledUp) {
+          setLevelUpData({
+            oldLevel: result.oldLevel,
+            newLevel: result.newLevel,
+            rank: result.data.player.rank,
+          });
+        }
+
+        showToast(`ARISE Reward: +${reward.xp} XP & +${reward.gold} Gold!`);
+        return result.data;
+      }
+
+      // Check whether this exact member already exists in the Army.
+      const duplicateExists = prev.shadows.some(
+        (shadow) => shadow.name === reward.name && shadow.rank === reward.rank
+      );
+
+      // Duplicate members convert into bonus XP and Gold.
+      if (duplicateExists) {
+        const bonus = getDuplicateReward();
+        const result = addXpAndGold(nextData, bonus.xp, bonus.gold, showToast);
+
+        if (result.leveledUp) {
+          setLevelUpData({
+            oldLevel: result.oldLevel,
+            newLevel: result.newLevel,
+            rank: result.data.player.rank,
+          });
+        }
+
+        showToast(
+          `Duplicate ${reward.rank}-Rank Shadow! +${bonus.xp} XP & +${bonus.gold} Gold.`
+        );
+
+        return result.data;
+      }
+
+      // Add a newly summoned Army Member.
+      const newShadow: Shadow = {
+        id: newShadowId,
+        chapterId,
+        name: reward.name,
+        subjectName: subject.name,
+        grade: reward.grade,
+        power: reward.power,
+        lastRevisedDate: today,
+        isDormant: false,
+        extractedDate: today,
+        rank: reward.rank,
+      };
+
+      setAriseData({
+        shadowName: reward.name,
+        subjectName: subject.name,
+        grade: `${reward.rank}-RANK`,
+        power: reward.power,
+      });
+
+      showToast(`${reward.rank}-Rank Army Member summoned!`);
+
+      return {
+        ...nextData,
         shadows: [newShadow, ...prev.shadows],
       };
     });
@@ -771,18 +952,16 @@ export default function App() {
     showToast('System settings updated.');
   };
 
-
-
   const handleResetData = () => {
     localStorage.removeItem('SHADOW_STUDY_DATA_V2');
     localStorage.removeItem('SHADOW_STUDY_WELCOME_DONE');
     localStorage.removeItem('SHADOW_STUDY_TIMER_STATE');
-    setData(loadAppData());
+    setData(ensureExamChapters(loadAppData()));
     setCurrentTab('today');
   };
 
   const handleImportData = (imported: AppData) => {
-    setData(normalizeData(imported));
+    setData(ensureExamChapters(normalizeData(imported)));
     setTimeout(() => {
       runDailyCheck();
     }, 0);
@@ -1004,7 +1183,19 @@ export default function App() {
         {currentTab === 'today' && <TodayScreen data={data} onNavigate={setCurrentTab} onCompleteQuest={handleCompleteQuest} onOpenStatus={() => setShowStatusPopup(true)} />}
         {currentTab === 'quests' && <QuestsScreen data={data} onCompleteQuest={handleCompleteQuest} onAddQuest={handleAddQuest} onDeleteQuest={handleDeleteQuest} />}
         {currentTab === 'focus' && <FocusScreen data={data} onFinishSession={handleFinishFocusSession} />}
-        {currentTab === 'learn' && <LearnScreen data={data} onAddSubject={handleAddSubject} onAddChapter={handleAddChapter} onMarkLearned={handleMarkLearned} onReviewChapter={handleReviewChapter} onExtractShadow={handleExtractShadow} />}
+        {currentTab === 'learn' && (
+          <LearnScreen
+            data={data}
+            onAddSubject={handleAddSubject}
+            onAddChapter={handleAddChapter}
+            onAddExamChapter={handleAddExamChapter}
+            onMarkLearned={handleMarkLearned}
+            onReviewChapter={handleReviewChapter}
+            onExtractShadow={handleExtractShadow}
+            onExamComplete={handleExamComplete}
+            onClaimExamReward={handleClaimExamReward}
+          />
+        )}
         {currentTab === 'gates' && <GatesScreen data={data} onAddGate={handleAddGate} onToggleGateStep={handleToggleGateStep} onCompleteBoss={handleCompleteBoss} onTriggerDoubleDungeon={setDoubleDungeonTitle} />}
         {currentTab === 'army' && <ArmyScreen data={data} onUpdateNickname={handleUpdateNickname} onStartExpedition={handleStartExpedition} onClaimExpedition={handleClaimExpedition} />}
         {currentTab === 'character' && <CharacterScreen data={data} onAllocatePoint={handleAllocatePoint} onSelectPath={handleSelectPath} onUseResilience={handleUseResilience} onUnlockReward={handleUnlockReward} />}

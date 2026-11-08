@@ -23,8 +23,7 @@ export interface Player {
   gold: number;
   growthPoints: number;
   attributes: Attributes;
-  attributeGrades: Record < keyof Attributes,
-  string > ;
+  attributeGrades: Record<keyof Attributes, string>;
   dailyGoalMinutes: number;
   todayStudyMinutes: number;
   todayRevisionsDone: number;
@@ -42,10 +41,18 @@ export interface Player {
   unlockedTitles: string[];
   completedDailySet: boolean;
   lastStatusPopupDate: string;
-  questsCompletedTotal ? : number;
+  questsCompletedTotal?: number;
 }
 
-export type QuestType = 'daily' | 'main' | 'side' | 'hidden' | 'comeback' | 'instant' | 'weekly_boss';
+export type QuestType =
+  | 'daily'
+  | 'main'
+  | 'side'
+  | 'hidden'
+  | 'comeback'
+  | 'instant'
+  | 'weekly_boss';
+
 export type QuestDifficulty = 'easy' | 'medium' | 'hard';
 
 export interface Quest {
@@ -57,22 +64,35 @@ export interface Quest {
   xpReward: number;
   goldReward: number;
   completed: boolean;
-  completedDate ? : string;
-  chainId ? : string;
-  targetMinutes ? : number;
+  completedDate?: string;
+  chainId?: string;
+  targetMinutes?: number;
 }
 
+// Learn chapter (Learn tab only).
 export interface Chapter {
   id: string;
   subjectId: string;
   title: string;
   learned: boolean;
-  learnedDate ? : string;
+  learnedDate?: string;
   revisionCount: number;
-  nextRevisionDate ? : string;
-  lastRevisionDate ? : string;
-  intervalStage: number; // 0, 1(1d), 2(3d), 3(7d), 4(14d), 5(30d), 6(60d)
+  nextRevisionDate?: string;
+  lastRevisionDate?: string;
+  intervalStage: number;
   extractedToShadow: boolean;
+  // Legacy fields from older saves. No longer written for Learn chapters.
+  examCompleted?: boolean;
+  examAriseClaimed?: boolean;
+}
+
+// Exam Time chapter (Exam Time tab only). Stored in subject.examChapters.
+export interface ExamChapter {
+  id: string;
+  subjectId: string;
+  title: string;
+  examCompleted: boolean;
+  examAriseClaimed: boolean;
 }
 
 export interface Subject {
@@ -80,21 +100,28 @@ export interface Subject {
   name: string;
   color: string;
   chapters: Chapter[];
+  examChapters?: ExamChapter[];
 }
 
-export type ShadowGrade = 'Soldier' | 'Elite' | 'Knight' | 'Elite Knight' | 'Marshal';
+export type ShadowGrade =
+  | 'Soldier'
+  | 'Elite'
+  | 'Knight'
+  | 'Elite Knight'
+  | 'Marshal';
 
 export interface Shadow {
   id: string;
   chapterId: string;
   name: string;
-  customNickname ? : string;
+  customNickname?: string;
   subjectName: string;
   grade: ShadowGrade;
   power: number;
   lastRevisedDate: string;
   isDormant: boolean;
   extractedDate: string;
+  rank?: Rank;
 }
 
 export type GateRank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S';
@@ -115,9 +142,9 @@ export interface Gate {
   bossCompleted: boolean;
   rewardXp: number;
   rewardGold: number;
-  deadline ? : string;
+  deadline?: string;
   cleared: boolean;
-  clearedDate ? : string;
+  clearedDate?: string;
 }
 
 export interface PlannerItem {
@@ -163,7 +190,7 @@ export interface RewardItem {
   title: string;
   category: string;
   unlocked: boolean;
-  unlockedAt ? : number;
+  unlockedAt?: number;
   costGold: number;
 }
 
@@ -179,19 +206,32 @@ export interface Expedition {
   completed: boolean;
 }
 
-export type AchievementTier = 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond' | 'Monarch';
+export type AchievementTier =
+  | 'Bronze'
+  | 'Silver'
+  | 'Gold'
+  | 'Platinum'
+  | 'Diamond'
+  | 'Monarch';
 
 export interface Achievement {
   id: string;
   title: string;
   description: string;
-  category: 'Study Time' | 'Discipline' | 'Level' | 'Army' | 'Gates' | 'Knowledge' | 'Quests';
+  category:
+    | 'Study Time'
+    | 'Discipline'
+    | 'Level'
+    | 'Army'
+    | 'Gates'
+    | 'Knowledge'
+    | 'Quests';
   tier: AchievementTier;
   targetValue: number;
   unlocked: boolean;
   claimed: boolean;
   rewardGold: number;
-  rewardGrowthPoints ? : number;
+  rewardGrowthPoints?: number;
 }
 
 export interface DailyEvaluation {
@@ -207,7 +247,7 @@ export interface SeasonData {
   seasonName: string;
   active: boolean;
   bossDefeated: boolean;
-  startDate ? : string;
+  startDate?: string;
 }
 
 export interface StudySessionLog {
@@ -230,7 +270,7 @@ export interface AppSettings {
 export interface VowStreak {
   id: string;
   name: string;
-  startDate: string; // empty string = not begun yet
+  startDate: string;
   bestStreak: number;
   relapses: number;
   claimedMilestones: number[];
@@ -259,5 +299,5 @@ export interface AppData {
   sessions: StudySessionLog[];
   settings: AppSettings;
   lastLoginDate: string;
-  vow ? : VowData;
+  vow?: VowData;
 }
