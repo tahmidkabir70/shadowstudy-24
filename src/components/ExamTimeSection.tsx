@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { CheckCircle2, Lock, Plus, Sparkles, Trophy } from 'lucide-react';
-import type { Chapter, Subject } from '../types';
+import type { ExamChapter, Subject } from '../types';
 
 interface ExamTimeSectionProps {
   subjects: Subject[];
@@ -10,54 +9,54 @@ interface ExamTimeSectionProps {
   onClaim: (chapterId: string) => void;
 }
 
-const ExamTimeSection: React.FC<ExamTimeSectionProps> = ({
+const ExamTimeSection: React.FC < ExamTimeSectionProps > = ({
   subjects,
   onAddExamChapter,
   onComplete,
   onClaim,
 }) => {
-  const [chapterInputs, setChapterInputs] = useState<Record<string, string>>({});
-
+  const [chapterInputs, setChapterInputs] = useState < Record < string, string >> ({});
+  
   const totalChapters = subjects.reduce(
     (total, subject) => total + (subject.examChapters || []).length,
     0
   );
-
+  
   const completedChapters = subjects.reduce(
     (total, subject) =>
-      total +
-      (subject.examChapters || []).filter(
-        (chapter) => chapter.examCompleted
-      ).length,
+    total +
+    (subject.examChapters || []).filter(
+      (chapter) => chapter.examCompleted
+    ).length,
     0
   );
-
+  
   const claimedRewards = subjects.reduce(
     (total, subject) =>
-      total +
-      (subject.examChapters || []).filter(
-        (chapter) => chapter.examAriseClaimed
-      ).length,
+    total +
+    (subject.examChapters || []).filter(
+      (chapter) => chapter.examAriseClaimed
+    ).length,
     0
   );
-
+  
   const handleAddChapter = (subjectId: string) => {
     const title = (chapterInputs[subjectId] || '').trim();
-
+    
     if (!title) return;
-
+    
     onAddExamChapter(subjectId, title);
-
+    
     setChapterInputs((previous) => ({
       ...previous,
       [subjectId]: '',
     }));
   };
-
-  const renderChapter = (chapter: Chapter) => {
+  
+  const renderChapter = (chapter: ExamChapter) => {
     const completed = Boolean(chapter.examCompleted);
     const claimed = Boolean(chapter.examAriseClaimed);
-
+    
     return (
       <div
         key={chapter.id}
@@ -121,7 +120,7 @@ const ExamTimeSection: React.FC<ExamTimeSectionProps> = ({
       </div>
     );
   };
-
+  
   return (
     <section className="mt-6 space-y-4">
       <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-950/50 to-indigo-950/30 p-4">
