@@ -20,17 +20,14 @@ export const AriseModal: React.FC<Props> = ({
   grade,
   power,
   onConfirm,
-  onClose,
 }) => {
   const [nickname, setNickname] = useState('');
-  const [confirmed, setConfirmed] = useState(false);
 
   const handleConfirm = () => {
     const cleanName = nickname.trim();
 
-    if (!cleanName || confirmed) return;
+    if (!cleanName) return;
 
-    setConfirmed(true);
     onConfirm(shadowId, cleanName);
   };
 
@@ -105,6 +102,9 @@ export const AriseModal: React.FC<Props> = ({
               type="text"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleConfirm();
+              }}
               placeholder="Enter your Shadow's name..."
               maxLength={20}
               autoComplete="off"
@@ -119,7 +119,7 @@ export const AriseModal: React.FC<Props> = ({
 
           <button
             onClick={handleConfirm}
-            disabled={!nickname.trim() || confirmed}
+            disabled={!nickname.trim()}
             className="w-full sl-btn sl-btn-purple py-3.5 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <CheckCircle className="w-4 h-4" />

@@ -650,11 +650,12 @@ export default function App() {
   };
 
   // Permanent ARISE nickname: validated, saved and locked before the modal is allowed to close.
-  const handleConfirmAriseNickname = (rawNickname: string) => {
-    if (!ariseData) return;
-
+  const handleConfirmAriseNickname = (
+    shadowId: string,
+    rawNickname: string
+  ) => {
     const nickname = (rawNickname || '').trim();
-    const shadowId = ariseData.shadowId;
+
     const target = data.shadows.find((s) => s.id === shadowId);
 
     if (!target) {
@@ -667,7 +668,6 @@ export default function App() {
       return;
     }
 
-    // Already permanent: nothing to change, safe to close.
     if (isNicknameLocked(target)) {
       confirmedAriseShadowIdRef.current = shadowId;
       setAriseData(null);
@@ -675,18 +675,29 @@ export default function App() {
     }
 
     if (isNicknameTaken(data.shadows, nickname, shadowId)) {
-      showToast('This nickname is already used by another Shadow. Choose a different one.');
+      showToast('This nickname is already used. Choose another one.');
       return;
     }
 
     setData((prev) => {
       const current = prev.shadows.find((s) => s.id === shadowId);
+
       if (!current || isNicknameLocked(current)) return prev;
-      if (isNicknameTaken(prev.shadows, nickname, shadowId)) return prev;
+
+      if (isNicknameTaken(prev.shadows, nickname, shadowId)) {
+        return prev;
+      }
+
       return {
         ...prev,
         shadows: prev.shadows.map((s) =>
-          s.id === shadowId ? { ...s, customNickname: nickname, customNicknameLocked: true } : s
+          s.id === shadowId
+            ? {
+                ...s,
+                customNickname: nickname,
+                customNicknameLocked: true,
+              }
+            : s
         ),
       };
     });
@@ -1147,6 +1158,7 @@ export default function App() {
       {/* ARISE Cinematic Modal */}
       {ariseData && (
         <AriseModal
+          shadowId={ariseData.shadowId}
           shadowName={ariseData.shadowName}
           subjectName={ariseData.subjectName}
           grade={ariseData.grade}
