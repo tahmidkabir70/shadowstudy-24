@@ -81,8 +81,6 @@ export interface Chapter {
   lastRevisionDate ? : string;
   intervalStage: number;
   extractedToShadow: boolean;
-  
-  // Exam Time system
   examCompleted ? : boolean;
   examAriseClaimed ? : boolean;
 }
@@ -92,6 +90,7 @@ export interface Subject {
   name: string;
   color: string;
   chapters: Chapter[];
+  examChapters ? : Chapter[];
 }
 
 export type ShadowGrade = |
@@ -112,8 +111,6 @@ export interface Shadow {
   lastRevisedDate: string;
   isDormant: boolean;
   extractedDate: string;
-  
-  // Exam Time Army Rank
   rank ? : Rank;
 }
 
