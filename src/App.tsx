@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { AppData, AppSettings, Chapter, ExamChapter, Gate, JobPath, NoteItem, PlannerItem, Player, Quest, Shadow, ShopItem, Subject } from './types';
+import { AppData, AppSettings, Chapter, ExamChapter, Gate, JobPath, NoteItem, PlannerItem, Player, Quest, Rank, Shadow, ShopItem, Subject } from './types';
 import { loadAppData, saveAppData, normalizeData } from './utils/storage';
 import { addXpAndGold, getNextRevisionDays, calculateRank, gradeForRevisions, powerForRevisions } from './utils/gameLogic';
 import { rollExamReward, getDuplicateReward } from './utils/examRewards';
@@ -77,6 +77,125 @@ function isNicknameTaken(shadows: Shadow[], nickname: string, excludeShadowId: s
   );
 }
 
+// ---------------------------------------------------------------------------
+// Exam Time lottery
+// ---------------------------------------------------------------------------
+
+const EXAM_EXTRACTION_CHANCE = 0.05; // 5% Shadow Extraction
+const EXAM_NO_EXTRACTION_XP = 40;
+const EXAM_NO_EXTRACTION_GOLD = 20;
+const EXAM_LOW_LUCK_COUNT = 4;
+
+// S Rank is never obtainable from Exam Time.
+const NORMAL_RANK_WEIGHTS: Array<[Rank, number]> = [
+  ['E', 45],
+  ['D', 30],
+  ['C', 15],
+  ['B', 8],
+  ['A', 2],
+];
+
+// After an A Rank: next 4 successful extractions are E/D only.
+const LOW_LUCK_RANK_WEIGHTS: Array<[Rank, number]> = [
+  ['E', 70],
+  ['D', 30],
+];
+
+function rollExamRank(weights: Array<[Rank, number]>): Rank {
+  const total = weights.reduce((sum, [, weight]) => sum + weight, 0);
+  let roll = Math.random() * total;
+  for (const [rank, weight] of weights) {
+    if (roll < weight) return rank;
+    roll -= weight;
+  }
+  return weights[weights.length - 1][0];
+}
+
+type ExamShadowTemplate = {
+  name: string;
+  rank: Rank;
+  grade: Shadow['grade'];
+  power: number;
+};
+
+const FALLBACK_SHADOW_STATS: Record<string, { grade: Shadow['grade']; power: number }> = {
+  E: { grade: 'Soldier', power: 25 },
+  D: { grade: 'Soldier', power: 40 },
+  C: { grade: 'Elite', power: 60 },
+  B: { grade: 'Knight', power: 85 },
+  A: { grade: 'Elite Knight', power: 115 },
+};
+
+// Picks an Army Pool member of the requested rank using the existing reward pool.
+// The rank is decided first (independently per extraction); the pool only supplies the member.
+function pickExamShadowTemplate(rank: Rank): ExamShadowTemplate {
+  for (let attempt = 0; attempt < 400; attempt++) {
+    const candidate = rollExamReward();
+    if (candidate.type !== 'points' && candidate.rank === rank) {
+      return {
+        name: candidate.name,
+        rank,
+        grade: candidate.grade,
+        power: candidate.power,
+      };
+    }
+  }
+
+  // Safety fallback if the pool has no member for this rank.
+  const stats = FALLBACK_SHADOW_STATS[rank] || FALLBACK_SHADOW_STATS.E;
+  return {
+    name: `${rank}-Rank Shadow Soldier #${Math.floor(Math.random() * 900 + 100)}`,
+    rank,
+    grade: stats.grade,
+    power: stats.power,
+  };
+}
+
+// Marks one exam chapter as claimed (synchronous double-claim guard + refresh safety).
+function markExamChapterClaimed(d: AppData, chapterId: string): AppData {
+  return {
+    ...d,
+    subjects: d.subjects.map((sub) => ({
+      ...sub,
+      examChapters: (sub.examChapters || []).map((ch) =>
+        ch.id === chapterId ? { ...ch, examAriseClaimed: true } : ch
+      ),
+    })),
+  };
+}
+
+// Undo a claim mark (only used to recover from an impossible half-finished state).
+function releaseExamChapterClaim(d: AppData, chapterId: string): AppData {
+  return {
+    ...d,
+    subjects: d.subjects.map((sub) => ({
+      ...sub,
+      examChapters: (sub.examChapters || []).map((ch) =>
+        ch.id === chapterId ? { ...ch, examAriseClaimed: false } : ch
+      ),
+    })),
+  };
+}
+
+// Removes an exam chapter. Only subject.examChapters is touched, never subject.chapters.
+function removeExamChapter(d: AppData, chapterId: string): AppData {
+  return {
+    ...d,
+    subjects: d.subjects.map((sub) => ({
+      ...sub,
+      examChapters: (sub.examChapters || []).filter((ch) => ch.id !== chapterId),
+    })),
+  };
+}
+
+// After a pending exam shadow's nickname is locked: remove its exam chapter and clear pending.
+function finalizePendingExam(d: AppData, shadowId: string): AppData {
+  const pendingId = d.pendingExamChapterId;
+  const shadow = d.shadows.find((s) => s.id === shadowId);
+  if (!pendingId || !shadow || shadow.chapterId !== pendingId) return d;
+  return { ...removeExamChapter(d, pendingId), pendingExamChapterId: undefined };
+}
+
 export default function App() {
   const [data, setData] = useState<AppData>(() => ensureExamChapters(loadAppData()));
   const [currentTab, setCurrentTab] = useState<string>('today');
@@ -89,6 +208,13 @@ export default function App() {
 
   // Remembers which ARISE shadow just had its nickname saved, so the modal can close safely.
   const confirmedAriseShadowIdRef = useRef<string | null>(null);
+
+  // Always holds the latest data so Exam claims can read it synchronously.
+  const dataRef = useRef<AppData>(data);
+  dataRef.current = data;
+
+  // Synchronous lock against double-click claims.
+  const claimLockRef = useRef<boolean>(false);
 
   const lang = data.settings.language;
 
@@ -110,6 +236,55 @@ export default function App() {
   useEffect(() => {
     saveAppData(data);
   }, [data]);
+
+  // Writes new data and updates the ref immediately (no random/side effects inside updaters).
+  const commitData = (next: AppData) => {
+    dataRef.current = next;
+    setData(next);
+  };
+
+  // Re-opens the ARISE nickname modal for a pending (not yet nicknamed) exam shadow.
+  const openPendingArise = (d: AppData): boolean => {
+    const pendingId = d.pendingExamChapterId;
+    if (!pendingId) return false;
+    const shadow = d.shadows.find((s) => s.chapterId === pendingId);
+    if (!shadow || isNicknameLocked(shadow)) return false;
+    setAriseData({
+      shadowId: shadow.id,
+      shadowName: shadow.name,
+      subjectName: shadow.subjectName,
+      grade: shadow.rank ? `${shadow.rank}-RANK` : shadow.grade,
+      power: shadow.power,
+    });
+    return true;
+  };
+
+  // Refresh recovery: restore a pending exam ARISE so the extraction is never lost.
+  useEffect(() => {
+    const d = dataRef.current;
+    const pendingId = d.pendingExamChapterId;
+    if (!pendingId) return;
+
+    const shadow = d.shadows.find((s) => s.chapterId === pendingId);
+
+    if (!shadow) {
+      // No shadow was ever added: safely release the chapter so it can be claimed again.
+      setData((prev) => {
+        if (prev.pendingExamChapterId !== pendingId) return prev;
+        if (prev.shadows.some((s) => s.chapterId === pendingId)) return prev;
+        return { ...releaseExamChapterClaim(prev, pendingId), pendingExamChapterId: undefined };
+      });
+      return;
+    }
+
+    if (isNicknameLocked(shadow)) {
+      // Nickname was already locked: just finish the chapter removal.
+      setData((prev) => finalizePendingExam(prev, shadow.id));
+      return;
+    }
+
+    openPendingArise(d);
+  }, []);
 
   const runDailyCheck = () => {
     const todayStr = localDateStr();
@@ -508,9 +683,9 @@ export default function App() {
   };
 
   // Exam Complete: only the matching entry in subject.examChapters is changed.
-  // Learn chapters (subject.chapters) are never touched here.
+  // No lottery happens here. Learn chapters (subject.chapters) are never touched.
   const handleExamComplete = (chapterId: string) => {
-    const target = data.subjects
+    const target = dataRef.current.subjects
       .flatMap((subject) => subject.examChapters || [])
       .find((chapter) => chapter.id === chapterId);
 
@@ -538,9 +713,21 @@ export default function App() {
     showToast('Chapter completed. ARISE reward unlocked!');
   };
 
-  // ARISE Reward: one claim per completed exam chapter, guarded by examAriseClaimed.
+  // ARISE Claim Reward (Lottery). Everything random happens once, outside any state updater.
+  // 95%: +40 XP & +20 Gold. 5%: Shadow Extraction with a random rank.
   const handleClaimExamReward = (chapterId: string) => {
-    const sourceSubject = data.subjects.find((subject) =>
+    if (claimLockRef.current) return;
+
+    const current = dataRef.current;
+
+    // A previous extraction still waits for its nickname: bring it back first.
+    if (current.pendingExamChapterId) {
+      showToast('Confirm the pending ARISE nickname first.');
+      openPendingArise(current);
+      return;
+    }
+
+    const sourceSubject = current.subjects.find((subject) =>
       (subject.examChapters || []).some((chapter) =>
         chapter.id === chapterId && chapter.examCompleted && !chapter.examAriseClaimed
       )
@@ -548,38 +735,17 @@ export default function App() {
 
     if (!sourceSubject) return;
 
-    // Roll once outside the state updater so repeated updater calls cannot reroll.
-    const reward = rollExamReward();
-    const newShadowId = 'exam_sh_' + Date.now();
-    const today = localDateStr();
+    claimLockRef.current = true;
 
-    setData((prev) => {
-      const subject = prev.subjects.find((item) =>
-        (item.examChapters || []).some((chapter) =>
-          chapter.id === chapterId && chapter.examCompleted && !chapter.examAriseClaimed
-        )
-      );
+    try {
+      // Mark the chapter as claimed right away so a refresh or double click cannot claim twice.
+      const claimedData = markExamChapterClaimed(current, chapterId);
+      const extracted = Math.random() < EXAM_EXTRACTION_CHANCE;
 
-      // Already claimed (or not completed): block duplicate claim.
-      if (!subject) return prev;
-
-      const updatedSubjects = prev.subjects.map((item) => ({
-        ...item,
-        examChapters: (item.examChapters || []).map((chapter) =>
-          chapter.id === chapterId
-            ? { ...chapter, examAriseClaimed: true }
-            : chapter
-        ),
-      }));
-
-      const nextData: AppData = {
-        ...prev,
-        subjects: updatedSubjects,
-      };
-
-      // 50% chance: points only.
-      if (reward.type === 'points') {
-        const result = addXpAndGold(nextData, reward.xp, reward.gold, showToast);
+      // 95%: No Extraction -> points, chapter is removed.
+      if (!extracted) {
+        const base = removeExamChapter(claimedData, chapterId);
+        const result = addXpAndGold(base, EXAM_NO_EXTRACTION_XP, EXAM_NO_EXTRACTION_GOLD, showToast);
 
         if (result.leveledUp) {
           setLevelUpData({
@@ -589,19 +755,26 @@ export default function App() {
           });
         }
 
-        showToast(`ARISE Reward: +${reward.xp} XP & +${reward.gold} Gold!`);
-        return result.data;
+        commitData(result.data);
+        showToast(`No Extraction. +${EXAM_NO_EXTRACTION_XP} XP & +${EXAM_NO_EXTRACTION_GOLD} Gold!`);
+        return;
       }
 
-      // Check whether this exact member already exists in the Army.
-      const duplicateExists = prev.shadows.some(
-        (shadow) => shadow.name === reward.name && shadow.rank === reward.rank
+      // 5%: Shadow Extraction. Rank is rolled independently for this extraction.
+      const lowLuckRemaining = current.examLowLuckRemaining ?? 0;
+      const lowLuckActive = lowLuckRemaining > 0;
+      const rank = rollExamRank(lowLuckActive ? LOW_LUCK_RANK_WEIGHTS : NORMAL_RANK_WEIGHTS);
+      const template = pickExamShadowTemplate(rank);
+
+      // Existing duplicate protection: same member already in the Army.
+      const duplicateExists = current.shadows.some(
+        (shadow) => shadow.name === template.name && shadow.rank === template.rank
       );
 
-      // Duplicate members convert into bonus XP and Gold.
       if (duplicateExists) {
         const bonus = getDuplicateReward();
-        const result = addXpAndGold(nextData, bonus.xp, bonus.gold, showToast);
+        const base = removeExamChapter(claimedData, chapterId);
+        const result = addXpAndGold(base, bonus.xp, bonus.gold, showToast);
 
         if (result.leveledUp) {
           setLevelUpData({
@@ -611,45 +784,60 @@ export default function App() {
           });
         }
 
+        // No new Shadow joined the Army, so the low-luck counter is not changed.
+        commitData(result.data);
         showToast(
-          `Duplicate ${reward.rank}-Rank Shadow! +${bonus.xp} XP & +${bonus.gold} Gold.`
+          `Duplicate ${template.rank}-Rank Shadow! +${bonus.xp} XP & +${bonus.gold} Gold.`
         );
-
-        return result.data;
+        return;
       }
 
-      // Add a newly summoned Army Member.
+      // New Army Member. The chapter stays (pending) until the nickname is locked.
+      const today = localDateStr();
+      const newShadowId = 'exam_sh_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
       const newShadow: Shadow = {
         id: newShadowId,
         chapterId,
-        name: reward.name,
-        subjectName: subject.name,
-        grade: reward.grade,
-        power: reward.power,
+        name: template.name,
+        subjectName: sourceSubject.name,
+        grade: template.grade,
+        power: template.power,
         lastRevisedDate: today,
         isDormant: false,
         extractedDate: today,
-        rank: reward.rank,
+        rank: template.rank,
       };
+
+      let nextLowLuck = lowLuckRemaining;
+      if (lowLuckActive) {
+        nextLowLuck = Math.max(0, lowLuckRemaining - 1);
+      } else if (template.rank === 'A') {
+        nextLowLuck = EXAM_LOW_LUCK_COUNT;
+      }
+
+      commitData({
+        ...claimedData,
+        shadows: [newShadow, ...claimedData.shadows],
+        pendingExamChapterId: chapterId,
+        examLowLuckRemaining: nextLowLuck,
+      });
 
       setAriseData({
         shadowId: newShadowId,
-        shadowName: reward.name,
-        subjectName: subject.name,
-        grade: `${reward.rank}-RANK`,
-        power: reward.power,
+        shadowName: template.name,
+        subjectName: sourceSubject.name,
+        grade: `${template.rank}-RANK`,
+        power: template.power,
       });
 
-      showToast(`${reward.rank}-Rank Army Member summoned!`);
-
-      return {
-        ...nextData,
-        shadows: [newShadow, ...prev.shadows],
-      };
-    });
+      showToast(`${template.rank}-Rank Army Member summoned!`);
+    } finally {
+      claimLockRef.current = false;
+    }
   };
 
   // Permanent ARISE nickname: validated, saved and locked before the modal is allowed to close.
+  // For a pending Exam extraction, the exam chapter is removed only after the lock succeeds.
   const handleConfirmAriseNickname = (
     shadowId: string,
     rawNickname: string
@@ -669,6 +857,7 @@ export default function App() {
     }
 
     if (isNicknameLocked(target)) {
+      setData((prev) => finalizePendingExam(prev, shadowId));
       confirmedAriseShadowIdRef.current = shadowId;
       setAriseData(null);
       return;
@@ -688,7 +877,7 @@ export default function App() {
         return prev;
       }
 
-      return {
+      const withNickname: AppData = {
         ...prev,
         shadows: prev.shadows.map((s) =>
           s.id === shadowId
@@ -700,6 +889,9 @@ export default function App() {
             : s
         ),
       };
+
+      // Only now (nickname locked) is the pending exam chapter removed.
+      return finalizePendingExam(withNickname, shadowId);
     });
 
     confirmedAriseShadowIdRef.current = shadowId;

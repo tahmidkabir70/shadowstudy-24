@@ -1,4 +1,3 @@
-
 export type Rank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S';
 
 export type JobPath = 'Scholar' | 'Strategist' | 'Endurer' | 'None';
@@ -299,4 +298,11 @@ export interface AppData {
   settings: AppSettings;
   lastLoginDate: string;
   vow?: VowData;
+
+  // Exam Time ARISE lottery persistence.
+  // Keeps the chapter pending until the extracted Shadow's nickname is locked.
+  pendingExamChapterId?: string;
+
+  // Number of successful future Shadow extractions restricted to E/D ranks.
+  examLowLuckRemaining?: number;
 }

@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { CheckCircle2, Lock, Plus, Sparkles, Trophy } from 'lucide-react';
+import {
+  CheckCircle2,
+  Lock,
+  Plus,
+  Sparkles,
+  Trophy,
+} from 'lucide-react';
 import type { ExamChapter, Subject } from '../types';
 
 interface ExamTimeSectionProps {
@@ -9,54 +15,58 @@ interface ExamTimeSectionProps {
   onClaim: (chapterId: string) => void;
 }
 
-const ExamTimeSection: React.FC < ExamTimeSectionProps > = ({
+const ExamTimeSection: React.FC<ExamTimeSectionProps> = ({
   subjects,
   onAddExamChapter,
   onComplete,
   onClaim,
 }) => {
-  const [chapterInputs, setChapterInputs] = useState < Record < string, string >> ({});
-  
+  const [chapterInputs, setChapterInputs] = useState<
+    Record<string, string>
+  >({});
+
   const totalChapters = subjects.reduce(
-    (total, subject) => total + (subject.examChapters || []).length,
+    (total, subject) =>
+      total + (subject.examChapters || []).length,
     0
   );
-  
+
   const completedChapters = subjects.reduce(
     (total, subject) =>
-    total +
-    (subject.examChapters || []).filter(
-      (chapter) => chapter.examCompleted
-    ).length,
+      total +
+      (subject.examChapters || []).filter(
+        (chapter) => chapter.examCompleted
+      ).length,
     0
   );
-  
-  const claimedRewards = subjects.reduce(
+
+  const pendingRewards = subjects.reduce(
     (total, subject) =>
-    total +
-    (subject.examChapters || []).filter(
-      (chapter) => chapter.examAriseClaimed
-    ).length,
+      total +
+      (subject.examChapters || []).filter(
+        (chapter) =>
+          chapter.examCompleted && !chapter.examAriseClaimed
+      ).length,
     0
   );
-  
+
   const handleAddChapter = (subjectId: string) => {
     const title = (chapterInputs[subjectId] || '').trim();
-    
+
     if (!title) return;
-    
+
     onAddExamChapter(subjectId, title);
-    
+
     setChapterInputs((previous) => ({
       ...previous,
       [subjectId]: '',
     }));
   };
-  
+
   const renderChapter = (chapter: ExamChapter) => {
     const completed = Boolean(chapter.examCompleted);
     const claimed = Boolean(chapter.examAriseClaimed);
-    
+
     return (
       <div
         key={chapter.id}
@@ -72,21 +82,30 @@ const ExamTimeSection: React.FC < ExamTimeSectionProps > = ({
               {claimed
                 ? 'Exam reward already claimed'
                 : completed
-                  ? 'Chapter completed'
+                  ? 'Chapter completed — Reward unlocked'
                   : 'Chapter not completed yet'}
             </p>
           </div>
 
           {claimed ? (
-            <CheckCircle2 size={20} className="shrink-0 text-green-400" />
+            <CheckCircle2
+              size={20}
+              className="shrink-0 text-green-400"
+            />
           ) : completed ? (
-            <Trophy size={20} className="shrink-0 text-yellow-400" />
+            <Trophy
+              size={20}
+              className="shrink-0 text-yellow-400"
+            />
           ) : (
-            <Lock size={19} className="shrink-0 text-gray-500" />
+            <Lock
+              size={19}
+              className="shrink-0 text-gray-500"
+            />
           )}
         </div>
 
-        {!completed && (
+        {!completed && !claimed && (
           <button
             type="button"
             onClick={() => onComplete(chapter.id)}
@@ -120,7 +139,7 @@ const ExamTimeSection: React.FC < ExamTimeSectionProps > = ({
       </div>
     );
   };
-  
+
   return (
     <section className="mt-6 space-y-4">
       <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-950/50 to-indigo-950/30 p-4">
@@ -133,28 +152,36 @@ const ExamTimeSection: React.FC < ExamTimeSectionProps > = ({
         </div>
 
         <p className="mt-2 text-xs leading-relaxed text-gray-400">
-          Add exam chapters separately. Complete a chapter to unlock its
-          ARISE reward.
+          Add exam chapters separately. Complete a chapter to
+          unlock its ARISE reward.
         </p>
 
         <div className="mt-4 grid grid-cols-3 gap-2">
           <div className="rounded-xl bg-black/20 p-2 text-center">
-            <p className="text-lg font-bold text-white">{totalChapters}</p>
-            <p className="text-[10px] text-gray-400">Total</p>
+            <p className="text-lg font-bold text-white">
+              {totalChapters}
+            </p>
+            <p className="text-[10px] text-gray-400">
+              Total
+            </p>
           </div>
 
           <div className="rounded-xl bg-black/20 p-2 text-center">
             <p className="text-lg font-bold text-green-400">
               {completedChapters}
             </p>
-            <p className="text-[10px] text-gray-400">Completed</p>
+            <p className="text-[10px] text-gray-400">
+              Completed
+            </p>
           </div>
 
           <div className="rounded-xl bg-black/20 p-2 text-center">
             <p className="text-lg font-bold text-purple-300">
-              {claimedRewards}
+              {pendingRewards}
             </p>
-            <p className="text-[10px] text-gray-400">Rewards</p>
+            <p className="text-[10px] text-gray-400">
+              Claim Ready
+            </p>
           </div>
         </div>
       </div>
