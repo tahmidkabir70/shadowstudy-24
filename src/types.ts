@@ -1,3 +1,4 @@
+
 export type Rank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S';
 
 export type JobPath = 'Scholar' | 'Strategist' | 'Endurer' | 'None';
@@ -69,7 +70,6 @@ export interface Quest {
   targetMinutes?: number;
 }
 
-// Learn chapter (Learn tab only).
 export interface Chapter {
   id: string;
   subjectId: string;
@@ -81,12 +81,10 @@ export interface Chapter {
   lastRevisionDate?: string;
   intervalStage: number;
   extractedToShadow: boolean;
-  // Legacy fields from older saves. No longer written for Learn chapters.
   examCompleted?: boolean;
   examAriseClaimed?: boolean;
 }
 
-// Exam Time chapter (Exam Time tab only). Stored in subject.examChapters.
 export interface ExamChapter {
   id: string;
   subjectId: string;
@@ -115,6 +113,7 @@ export interface Shadow {
   chapterId: string;
   name: string;
   customNickname?: string;
+  customNicknameLocked?: boolean;
   subjectName: string;
   grade: ShadowGrade;
   power: number;

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppData, AppSettings, Chapter, ExamChapter, Gate, JobPath, NoteItem, PlannerItem, Player, Quest, Shadow, ShopItem, Subject } from './types';
 import { loadAppData, saveAppData, normalizeData } from './utils/storage';
 import { addXpAndGold, getNextRevisionDays, calculateRank, gradeForRevisions, powerForRevisions } from './utils/gameLogic';
@@ -64,15 +64,31 @@ function ensureExamChapters(d: AppData): AppData {
   };
 }
 
+// Permanent nickname: locked explicitly, or (old saves) already has a custom nickname.
+function isNicknameLocked(shadow: Shadow): boolean {
+  return shadow.customNicknameLocked === true || Boolean(shadow.customNickname && shadow.customNickname.trim());
+}
+
+// A nickname is taken if another Army member already displays the same name (case-insensitive).
+function isNicknameTaken(shadows: Shadow[], nickname: string, excludeShadowId: string): boolean {
+  const key = nickname.trim().toLowerCase();
+  return shadows.some(
+    (s) => s.id !== excludeShadowId && (s.customNickname || s.name).trim().toLowerCase() === key
+  );
+}
+
 export default function App() {
   const [data, setData] = useState<AppData>(() => ensureExamChapters(loadAppData()));
   const [currentTab, setCurrentTab] = useState<string>('today');
   const [showStatusPopup, setShowStatusPopup] = useState<boolean>(false);
-  const [ariseData, setAriseData] = useState<{ shadowName: string; subjectName: string; grade: string; power: number } | null>(null);
+  const [ariseData, setAriseData] = useState<{ shadowId: string; shadowName: string; subjectName: string; grade: string; power: number } | null>(null);
   const [doubleDungeonTitle, setDoubleDungeonTitle] = useState<string | null>(null);
   const [levelUpData, setLevelUpData] = useState<{ oldLevel: number; newLevel: number; rank: string } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+
+  // Remembers which ARISE shadow just had its nickname saved, so the modal can close safely.
+  const confirmedAriseShadowIdRef = useRef<string | null>(null);
 
   const lang = data.settings.language;
 
@@ -482,7 +498,7 @@ export default function App() {
         isDormant: false,
         extractedDate: localDateStr(),
       };
-      setAriseData({ shadowName, subjectName, grade: newShadow.grade, power });
+      setAriseData({ shadowId: newShadow.id, shadowName, subjectName, grade: newShadow.grade, power });
       return {
         ...prev,
         subjects: updatedSubjects,
@@ -617,6 +633,7 @@ export default function App() {
       };
 
       setAriseData({
+        shadowId: newShadowId,
         shadowName: reward.name,
         subjectName: subject.name,
         grade: `${reward.rank}-RANK`,
@@ -630,6 +647,74 @@ export default function App() {
         shadows: [newShadow, ...prev.shadows],
       };
     });
+  };
+
+  // Permanent ARISE nickname: validated, saved and locked before the modal is allowed to close.
+  const handleConfirmAriseNickname = (rawNickname: string) => {
+    if (!ariseData) return;
+
+    const nickname = (rawNickname || '').trim();
+    const shadowId = ariseData.shadowId;
+    const target = data.shadows.find((s) => s.id === shadowId);
+
+    if (!target) {
+      showToast('Shadow not found. Nickname was not saved.');
+      return;
+    }
+
+    if (!nickname) {
+      showToast('Enter a nickname to continue.');
+      return;
+    }
+
+    // Already permanent: nothing to change, safe to close.
+    if (isNicknameLocked(target)) {
+      confirmedAriseShadowIdRef.current = shadowId;
+      setAriseData(null);
+      return;
+    }
+
+    if (isNicknameTaken(data.shadows, nickname, shadowId)) {
+      showToast('This nickname is already used by another Shadow. Choose a different one.');
+      return;
+    }
+
+    setData((prev) => {
+      const current = prev.shadows.find((s) => s.id === shadowId);
+      if (!current || isNicknameLocked(current)) return prev;
+      if (isNicknameTaken(prev.shadows, nickname, shadowId)) return prev;
+      return {
+        ...prev,
+        shadows: prev.shadows.map((s) =>
+          s.id === shadowId ? { ...s, customNickname: nickname, customNicknameLocked: true } : s
+        ),
+      };
+    });
+
+    confirmedAriseShadowIdRef.current = shadowId;
+    showToast(`Nickname locked permanently: ${nickname}`);
+    setAriseData(null);
+  };
+
+  // The ARISE modal can only close once its nickname has been saved.
+  const handleCloseArise = () => {
+    if (!ariseData) {
+      setAriseData(null);
+      return;
+    }
+
+    if (confirmedAriseShadowIdRef.current === ariseData.shadowId) {
+      setAriseData(null);
+      return;
+    }
+
+    const target = data.shadows.find((s) => s.id === ariseData.shadowId);
+    if (!target || isNicknameLocked(target)) {
+      setAriseData(null);
+      return;
+    }
+
+    showToast('Confirm a permanent nickname to continue.');
   };
 
   const handleAddGate = (gate: Gate) => {
@@ -797,11 +882,41 @@ export default function App() {
     });
   };
 
+  // Army rename: protected by the permanent-nickname lock and the duplicate-name check.
   const handleUpdateNickname = (shadowId: string, nickname: string) => {
-    setData((prev) => ({
-      ...prev,
-      shadows: prev.shadows.map((s) => (s.id === shadowId ? { ...s, customNickname: nickname } : s)),
-    }));
+    const cleanNickname = (nickname || '').trim();
+    const target = data.shadows.find((s) => s.id === shadowId);
+
+    if (!target) return;
+
+    if (isNicknameLocked(target)) {
+      showToast('This nickname is permanent and cannot be changed.');
+      return;
+    }
+
+    if (!cleanNickname) {
+      showToast('Nickname cannot be empty.');
+      return;
+    }
+
+    if (isNicknameTaken(data.shadows, cleanNickname, shadowId)) {
+      showToast('This nickname is already used by another Shadow. Choose a different one.');
+      return;
+    }
+
+    setData((prev) => {
+      const current = prev.shadows.find((s) => s.id === shadowId);
+      if (!current || isNicknameLocked(current)) return prev;
+      if (isNicknameTaken(prev.shadows, cleanNickname, shadowId)) return prev;
+      return {
+        ...prev,
+        shadows: prev.shadows.map((s) =>
+          s.id === shadowId ? { ...s, customNickname: cleanNickname, customNicknameLocked: true } : s
+        ),
+      };
+    });
+
+    showToast(`Nickname locked permanently: ${cleanNickname}`);
   };
 
   const handleVowBegin = (vowId: string, daysAlready: number) => {
@@ -1037,7 +1152,8 @@ export default function App() {
           grade={ariseData.grade}
           power={ariseData.power}
           soundEnabled={data.settings.soundEnabled}
-          onClose={() => setAriseData(null)}
+          onClose={handleCloseArise}
+          onConfirm={handleConfirmAriseNickname}
         />
       )}
 

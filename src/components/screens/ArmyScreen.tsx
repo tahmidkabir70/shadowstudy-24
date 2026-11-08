@@ -1,6 +1,13 @@
+
 import React, { useEffect, useState } from 'react';
 import { AppData, Shadow } from '../../types';
-import { Sparkles, AlertTriangle, Send, CheckCircle } from 'lucide-react';
+import {
+  Sparkles,
+  AlertTriangle,
+  Send,
+  CheckCircle,
+  Lock,
+} from 'lucide-react';
 
 interface Props {
   data: AppData;
@@ -9,7 +16,7 @@ interface Props {
   onClaimExpedition: (expId: string) => void;
 }
 
-export const ArmyScreen: React.FC < Props > = ({
+export const ArmyScreen: React.FC<Props> = ({
   data,
   onUpdateNickname,
   onStartExpedition,
@@ -17,21 +24,21 @@ export const ArmyScreen: React.FC < Props > = ({
 }) => {
   const { shadows, expeditions } = data;
   const [now, setNow] = useState(() => Date.now());
-  
+
   useEffect(() => {
     const interval = window.setInterval(() => {
       setNow(Date.now());
     }, 1000);
-    
+
     return () => window.clearInterval(interval);
   }, []);
-  
+
   const totalPower = shadows.reduce(
     (acc, shadow) =>
-    acc + (shadow.isDormant ? Math.round(shadow.power / 2) : shadow.power),
+      acc + (shadow.isDormant ? Math.round(shadow.power / 2) : shadow.power),
     0
   );
-  
+
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       <div className="bg-gradient-to-r from-purple-950 via-slate-900 to-black border-2 border-purple-500/50 rounded-2xl p-6 shadow-[0_0_25px_rgba(168,85,247,0.2)]">
@@ -127,6 +134,15 @@ export const ArmyScreen: React.FC < Props > = ({
             (exp) => exp.shadowId === shadow.id
           );
 
+          // পুরোনো Save Data-তে Nickname থাকলেও সেটি Locked থাকবে।
+          const hasNickname = Boolean(shadow.customNickname?.trim());
+          const isNicknameLocked =
+            Boolean(shadow.customNicknameLocked) || hasNickname;
+
+          const displayName = hasNickname
+            ? shadow.customNickname!.trim()
+            : shadow.name;
+
           return (
             <div
               key={shadow.id}
@@ -156,7 +172,7 @@ export const ArmyScreen: React.FC < Props > = ({
                 </div>
 
                 <h3 className="text-lg font-bold font-mono text-white mb-2">
-                  {shadow.name}
+                  {displayName}
                 </h3>
 
                 {shadow.isDormant && (
@@ -173,14 +189,29 @@ export const ArmyScreen: React.FC < Props > = ({
                     Shadow Nickname
                   </label>
 
-                  <input
-                    type="text"
-                    defaultValue={shadow.customNickname || shadow.name}
-                    onBlur={(e) =>
-                      onUpdateNickname(shadow.id, e.target.value)
-                    }
-                    className="w-full bg-slate-950 border border-purple-500/30 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-400"
-                  />
+                  {isNicknameLocked ? (
+                    <div className="w-full bg-slate-950 border border-purple-500/40 rounded-xl px-3 py-2 text-purple-200 flex items-center justify-between gap-2">
+                      <span className="truncate">{displayName}</span>
+                      <span className="flex items-center gap-1 text-[10px] text-purple-400 shrink-0">
+                        <Lock className="w-3.5 h-3.5" />
+                        LOCKED
+                      </span>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      defaultValue={shadow.name}
+                      onBlur={(e) => {
+                        const nickname = e.target.value.trim();
+
+                        if (nickname && nickname !== shadow.name) {
+                          onUpdateNickname(shadow.id, nickname);
+                        }
+                      }}
+                      placeholder="Enter Shadow Nickname"
+                      className="w-full bg-slate-950 border border-purple-500/30 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-400"
+                    />
+                  )}
                 </div>
 
                 <button
