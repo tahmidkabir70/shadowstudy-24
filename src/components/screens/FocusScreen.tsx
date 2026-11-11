@@ -8,6 +8,7 @@ import {
   Clock3,
   Target,
   Zap,
+  Shield,
 } from 'lucide-react';
 import { sound } from '../../utils/sound';
 
@@ -18,7 +19,7 @@ interface Props {
 
 const TIMER_STORAGE_KEY = 'SHADOW_STUDY_TIMER_STATE';
 
-type Soundscape = 'silence' | 'rain' | 'dungeon' | 'cyberpunk';
+type Soundscape = 'silence' | 'rain' | 'dungeon' | 'monarch';
 
 interface SavedTimer {
   endTimestamp?: number;
@@ -50,7 +51,7 @@ function readSavedTimer(): SavedTimer | null {
 
 /* ──────────────────────────────────────────────
    Ambient Sound Engine (Web Audio API)
-   No external files needed.
+   Themed for Solo Leveling atmospheres.
 ────────────────────────────────────────────── */
 class AmbientEngine {
   private ctx: AudioContext | null = null;
@@ -62,7 +63,8 @@ class AmbientEngine {
 
   private ensureContext() {
     if (!this.ctx) {
-      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.ctx = new (window.AudioContext ||
+        (window as any).webkitAudioContext)();
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = 0.22;
       this.masterGain.connect(this.ctx.destination);
@@ -77,14 +79,14 @@ class AmbientEngine {
       try {
         s.stop();
       } catch {
-        // already stopped
+        /* already stopped */
       }
     });
     this.nodes.forEach((n) => {
       try {
         n.disconnect();
       } catch {
-        // ignore
+        /* ignore */
       }
     });
     this.sources = [];
@@ -98,21 +100,28 @@ class AmbientEngine {
     const data = buffer.getChannelData(0);
 
     // Pink-ish noise
-    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+    let b0 = 0,
+      b1 = 0,
+      b2 = 0,
+      b3 = 0,
+      b4 = 0,
+      b5 = 0,
+      b6 = 0;
     for (let i = 0; i < data.length; i++) {
       const white = Math.random() * 2 - 1;
       b0 = 0.99886 * b0 + white * 0.0555179;
       b1 = 0.99332 * b1 + white * 0.0750759;
-      b2 = 0.96900 * b2 + white * 0.1538520;
-      b3 = 0.86650 * b3 + white * 0.3104856;
-      b4 = 0.55000 * b4 + white * 0.5329522;
-      b5 = -0.7616 * b5 - white * 0.0168980;
+      b2 = 0.969 * b2 + white * 0.153852;
+      b3 = 0.8665 * b3 + white * 0.3104856;
+      b4 = 0.55 * b4 + white * 0.5329522;
+      b5 = -0.7616 * b5 - white * 0.016898;
       data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
       b6 = white * 0.115926;
     }
     return buffer;
   }
 
+  /* ── RAIN ── soft rainfall with muffled lowpass */
   private startRain() {
     this.ensureContext();
     const buffer = this.createNoiseBuffer(3);
@@ -122,7 +131,7 @@ class AmbientEngine {
 
     const filter = this.ctx!.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = 900;
+    filter.frequency.value = 1100;
     filter.Q.value = 0.7;
 
     const gain = this.ctx!.createGain();
@@ -137,10 +146,19 @@ class AmbientEngine {
     this.nodes.push(filter, gain);
   }
 
+  /* ── DUNGEON DEPTHS ── ominous low drone with slow pulse */
   private startDungeon() {
     this.ensureContext();
 
-    // Low drone
+    const sub = this.ctx!.createOscillator();
+    sub.type = 'sine';
+    sub.frequency.value = 38;
+    const subGain = this.ctx!.createGain();
+    subGain.gain.value = 0.14;
+    sub.connect(subGain);
+    subGain.connect(this.masterGain!);
+    sub.start();
+
     const osc1 = this.ctx!.createOscillator();
     osc1.type = 'sine';
     osc1.frequency.value = 55;
@@ -151,22 +169,32 @@ class AmbientEngine {
 
     const filter = this.ctx!.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = 180;
+    filter.frequency.value = 190;
+    filter.Q.value = 4;
 
     const gain = this.ctx!.createGain();
-    gain.gain.value = 0.18;
+    gain.gain.value = 0.16;
 
-    // Subtle noise layer
+    // Slow pulse (heartbeat-like)
+    const lfo = this.ctx!.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.15;
+    const lfoGain = this.ctx!.createGain();
+    lfoGain.gain.value = 90;
+    lfo.connect(lfoGain);
+    lfoGain.connect(filter.frequency);
+    lfo.start();
+
     const noise = this.ctx!.createBufferSource();
     noise.buffer = this.createNoiseBuffer(4);
     noise.loop = true;
 
     const noiseFilter = this.ctx!.createBiquadFilter();
     noiseFilter.type = 'lowpass';
-    noiseFilter.frequency.value = 400;
+    noiseFilter.frequency.value = 350;
 
     const noiseGain = this.ctx!.createGain();
-    noiseGain.gain.value = 0.08;
+    noiseGain.gain.value = 0.07;
 
     osc1.connect(filter);
     osc2.connect(filter);
@@ -181,66 +209,78 @@ class AmbientEngine {
     osc2.start();
     noise.start();
 
-    this.sources.push(osc1, osc2, noise);
-    this.nodes.push(filter, gain, noiseFilter, noiseGain);
+    this.sources.push(sub, osc1, osc2, noise, lfo);
+    this.nodes.push(subGain, filter, gain, noiseFilter, noiseGain, lfoGain);
   }
 
-  private startCyberpunk() {
+  /* ── SHADOW MONARCH ── dark epic minor pads + sub drone */
+  private startMonarch() {
     this.ensureContext();
 
-    // Soft detuned pads
-    const freqs = [110, 138.59, 164.81];
+    // Deep sub bass drone
+    const sub = this.ctx!.createOscillator();
+    sub.type = 'sine';
+    sub.frequency.value = 41.2; // E1
+    const subGain = this.ctx!.createGain();
+    subGain.gain.value = 0.11;
+    sub.connect(subGain);
+    subGain.connect(this.masterGain!);
+    sub.start();
+
+    // A minor triad pads (A2, C3, E3)
+    const freqs = [110, 130.81, 164.81];
     freqs.forEach((f, i) => {
       const osc = this.ctx!.createOscillator();
-      osc.type = i === 0 ? 'sawtooth' : 'triangle';
+      osc.type = i === 0 ? 'triangle' : 'sine';
       osc.frequency.value = f;
 
       const filter = this.ctx!.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 600 + i * 120;
+      filter.frequency.value = 420 + i * 220;
+      filter.Q.value = 2.5;
 
       const gain = this.ctx!.createGain();
-      gain.gain.value = 0.06;
+      gain.gain.value = 0.055;
 
-      // Slow LFO for movement
+      // Breathing LFO
       const lfo = this.ctx!.createOscillator();
       lfo.type = 'sine';
-      lfo.frequency.value = 0.08 + i * 0.03;
+      lfo.frequency.value = 0.05 + i * 0.02;
       const lfoGain = this.ctx!.createGain();
-      lfoGain.gain.value = 40;
+      lfoGain.gain.value = 110;
       lfo.connect(lfoGain);
       lfoGain.connect(filter.frequency);
+      lfo.start();
 
       osc.connect(filter);
       filter.connect(gain);
       gain.connect(this.masterGain!);
 
       osc.start();
-      lfo.start();
 
       this.sources.push(osc, lfo);
       this.nodes.push(filter, gain, lfoGain);
     });
 
-    // Light high noise shimmer
+    // Subtle high shimmer
     const noise = this.ctx!.createBufferSource();
-    noise.buffer = this.createNoiseBuffer(2);
+    noise.buffer = this.createNoiseBuffer(3);
     noise.loop = true;
 
     const nFilter = this.ctx!.createBiquadFilter();
     nFilter.type = 'highpass';
-    nFilter.frequency.value = 1800;
+    nFilter.frequency.value = 2400;
 
     const nGain = this.ctx!.createGain();
-    nGain.gain.value = 0.03;
+    nGain.gain.value = 0.025;
 
     noise.connect(nFilter);
     nFilter.connect(nGain);
     nGain.connect(this.masterGain!);
     noise.start();
 
-    this.sources.push(noise);
-    this.nodes.push(nFilter, nGain);
+    this.sources.push(sub, noise);
+    this.nodes.push(subGain, nFilter, nGain);
   }
 
   play(type: Soundscape) {
@@ -258,7 +298,7 @@ class AmbientEngine {
 
     if (type === 'rain') this.startRain();
     else if (type === 'dungeon') this.startDungeon();
-    else if (type === 'cyberpunk') this.startCyberpunk();
+    else if (type === 'monarch') this.startMonarch();
 
     this.isPlaying = true;
   }
@@ -418,7 +458,7 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
     try {
       localStorage.removeItem(TIMER_STORAGE_KEY);
     } catch {
-      // ignore
+      /* ignore */
     }
   };
 
@@ -435,14 +475,14 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
     try {
       localStorage.removeItem(TIMER_STORAGE_KEY);
     } catch {
-      // ignore
+      /* ignore */
     }
   };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `\( {mins.toString().padStart(2, '0')}: \){secs
+    return `${mins.toString().padStart(2, '0')}:${secs
       .toString()
       .padStart(2, '0')}`;
   };
@@ -457,22 +497,28 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
 
   const atmospheres = [
     { id: 'silence' as const, label: 'Silence' },
-    { id: 'rain' as const, label: 'Rain' },
+    { id: 'rain' as const, label: 'Rainfall' },
     { id: 'dungeon' as const, label: 'Dungeon' },
-    { id: 'cyberpunk' as const, label: 'Cyberpunk' },
+    { id: 'monarch' as const, label: 'Monarch' },
   ];
 
   return (
     <div className="max-w-4xl mx-auto space-y-5 animate-fadeIn pb-12 px-1">
-      {/* SYSTEM HEADER */}
-      <div className="relative overflow-hidden rounded-2xl border border-cyan-500/25 bg-[#07111d] p-5 sm:p-6">
-        <div className="absolute -top-24 -right-20 w-64 h-64 bg-cyan-500/10 blur-[90px] rounded-full pointer-events-none" />
-        <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-violet-600/10 blur-[70px] rounded-full pointer-events-none" />
+      {/* ═══════════ SYSTEM HEADER ═══════════ */}
+      <div className="relative overflow-hidden rounded-2xl border border-blue-500/30 bg-[#060b18] p-5 sm:p-6">
+        <div className="absolute -top-24 -right-20 w-64 h-64 bg-blue-500/15 blur-[100px] rounded-full pointer-events-none" />
+        <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-violet-600/15 blur-[80px] rounded-full pointer-events-none" />
+
+        {/* Solo Leveling style corner brackets */}
+        <div className="absolute top-2 left-2 w-5 h-5 border-t-2 border-l-2 border-blue-400/70" />
+        <div className="absolute top-2 right-2 w-5 h-5 border-t-2 border-r-2 border-blue-400/70" />
+        <div className="absolute bottom-2 left-2 w-5 h-5 border-b-2 border-l-2 border-blue-400/70" />
+        <div className="absolute bottom-2 right-2 w-5 h-5 border-b-2 border-r-2 border-blue-400/70" />
 
         <div className="relative flex items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 text-[10px] sm:text-xs font-mono tracking-[0.22em] text-cyan-400 uppercase">
-              <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_12px_#22d3ee] animate-pulse" />
+            <div className="flex items-center gap-2 text-[10px] sm:text-xs font-mono tracking-[0.22em] text-blue-400 uppercase">
+              <span className="w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_14px_#3b82f6] animate-pulse" />
               SHADOW SYSTEM // FOCUS GATE
             </div>
 
@@ -487,13 +533,13 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
             </p>
           </div>
 
-          <div className="hidden sm:flex w-14 h-14 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.15)]">
-            <Zap className="w-7 h-7 text-cyan-300" />
+          <div className="hidden sm:flex w-14 h-14 rounded-2xl border border-blue-400/40 bg-blue-400/10 items-center justify-center shadow-[0_0_24px_rgba(59,130,246,0.25)]">
+            <Zap className="w-7 h-7 text-blue-300" />
           </div>
         </div>
 
         <div className="relative grid grid-cols-2 gap-3 mt-6">
-          <div className="rounded-xl bg-black/40 border border-white/5 p-3">
+          <div className="rounded-xl bg-black/50 border border-white/5 p-3">
             <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">
               Current Quest
             </div>
@@ -502,7 +548,7 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
             </div>
           </div>
 
-          <div className="rounded-xl bg-black/40 border border-white/5 p-3">
+          <div className="rounded-xl bg-black/50 border border-white/5 p-3">
             <div className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">
               System Status
             </div>
@@ -514,7 +560,9 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
                     : 'bg-amber-400 shadow-[0_0_8px_#fbbf24]'
                 }`}
               />
-              <span className={isRunning ? 'text-emerald-400' : 'text-amber-400'}>
+              <span
+                className={isRunning ? 'text-emerald-400' : 'text-amber-400'}
+              >
                 {isRunning ? 'ACTIVE' : 'STANDBY'}
               </span>
             </div>
@@ -522,41 +570,49 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
         </div>
       </div>
 
-      {/* MAIN TIMER */}
-      <div className="relative overflow-hidden rounded-3xl border border-cyan-500/25 bg-gradient-to-b from-[#0b1928] to-[#050a12] px-4 py-8 sm:py-10">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-36 bg-cyan-400/10 blur-[90px] pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-40 h-40 bg-violet-600/10 blur-[60px] pointer-events-none" />
+      {/* ═══════════ MAIN TIMER ═══════════ */}
+      <div className="relative overflow-hidden rounded-3xl border border-blue-500/30 bg-gradient-to-b from-[#0a1224] to-[#03060d] px-4 py-8 sm:py-10">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-36 bg-blue-500/15 blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-40 h-40 bg-violet-600/15 blur-[70px] pointer-events-none" />
+
+        {/* Corner brackets - Solo Leveling system window */}
+        <div className="absolute top-3 left-3 w-6 h-6 border-t-2 border-l-2 border-blue-400/60" />
+        <div className="absolute top-3 right-3 w-6 h-6 border-t-2 border-r-2 border-blue-400/60" />
+        <div className="absolute bottom-3 left-3 w-6 h-6 border-b-2 border-l-2 border-blue-400/60" />
+        <div className="absolute bottom-3 right-3 w-6 h-6 border-b-2 border-r-2 border-blue-400/60" />
 
         <div className="relative text-center">
-          <div className="text-[10px] sm:text-xs font-mono tracking-[0.32em] text-cyan-400 uppercase mb-7">
+          <div className="text-[10px] sm:text-xs font-mono tracking-[0.32em] text-blue-400 uppercase mb-7">
             {isBreak ? 'RECOVERY COUNTDOWN' : 'TIME REMAINING'}
           </div>
 
+          {/* ── CLEAN TIMER CIRCLE ── */}
           <div
             className="relative mx-auto w-[250px] h-[250px] sm:w-[290px] sm:h-[290px] rounded-full p-[8px]"
             style={{
-              background: `conic-gradient(from -90deg, #22d3ee ${
+              background: `conic-gradient(from -90deg, #3b82f6 ${
                 progressPercent * 3.6
-              }deg, rgba(30, 64, 80, 0.35) ${
-                progressPercent * 3.6
-              }deg 360deg)`,
-              boxShadow: '0 0 40px rgba(34,211,238,0.15)',
+              }deg, rgba(30, 58, 90, 0.35) ${progressPercent * 3.6}deg 360deg)`,
+              boxShadow: '0 0 50px rgba(59,130,246,0.22)',
             }}
           >
-            <div className="w-full h-full rounded-full bg-[#06101b] border border-cyan-400/15 flex flex-col items-center justify-center relative overflow-hidden">
-              <div className="absolute inset-5 rounded-full border border-cyan-400/10" />
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.06)_0%,transparent_70%)]" />
+            <div className="w-full h-full rounded-full bg-gradient-to-b from-[#050a14] to-[#02040a] border border-blue-500/20 flex flex-col items-center justify-center relative overflow-hidden">
+              {/* Decorative inner ring */}
+              <div className="absolute inset-5 rounded-full border border-blue-500/10" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.09)_0%,transparent_70%)]" />
 
-              <div className="relative text-[10px] tracking-[0.28em] font-mono text-cyan-500/90 uppercase mb-3">
-                {isRunning ? (isBreak ? 'RECOVERING' : 'CONCENTRATING') : 'READY'}
-              </div>
-
-              <div className="relative text-[52px] sm:text-[64px] font-black font-mono tracking-tight text-white tabular-nums drop-shadow-[0_0_22px_rgba(34,211,238,0.4)]">
+              {/* Big time — the only dominant element */}
+              <div className="relative text-[54px] sm:text-[64px] font-black font-mono tracking-tighter text-white tabular-nums leading-none drop-shadow-[0_0_24px_rgba(96,165,250,0.5)]">
                 {formatTime(timeLeft)}
               </div>
 
-              <div className="relative mt-3 text-[10px] font-mono text-slate-500 tracking-widest">
-                {progressPercent}% COMPLETED
+              {/* Small status label below */}
+              <div className="relative mt-3 text-[9px] font-mono tracking-[0.25em] text-blue-400/80 uppercase">
+                {isRunning
+                  ? isBreak
+                    ? 'RECOVERING'
+                    : 'IN COMBAT'
+                  : 'STANDBY'}
               </div>
             </div>
           </div>
@@ -584,8 +640,8 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
                   disabled={isRunning}
                   className={`rounded-xl py-3 text-xs sm:text-sm font-mono font-bold border transition-all ${
                     durationMins === mins
-                      ? 'bg-cyan-400 text-[#04111d] border-cyan-300 shadow-[0_0_20px_rgba(34,211,238,0.3)]'
-                      : 'bg-[#091522] text-slate-400 border-white/10 hover:border-cyan-400/50 hover:text-cyan-300'
+                      ? 'bg-blue-500 text-white border-blue-400 shadow-[0_0_22px_rgba(59,130,246,0.45)]'
+                      : 'bg-[#0a1524] text-slate-400 border-white/10 hover:border-blue-400/60 hover:text-blue-300'
                   } ${
                     isRunning
                       ? 'opacity-40 cursor-not-allowed'
@@ -604,8 +660,8 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
             onClick={handleToggle}
             className={`flex-1 max-w-[230px] py-4 rounded-xl flex items-center justify-center gap-2 text-sm font-black tracking-wider transition-all cursor-pointer ${
               isRunning
-                ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_22px_rgba(245,158,11,0.25)]'
-                : 'bg-cyan-400 hover:bg-cyan-300 text-[#04111d] shadow-[0_0_28px_rgba(34,211,238,0.3)]'
+                ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_22px_rgba(245,158,11,0.3)]'
+                : 'bg-blue-500 hover:bg-blue-400 text-white shadow-[0_0_32px_rgba(59,130,246,0.45)]'
             }`}
           >
             {isRunning ? (
@@ -623,7 +679,7 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
 
           <button
             onClick={handleReset}
-            className="w-14 h-14 rounded-xl flex items-center justify-center bg-[#101d2a] border border-cyan-500/25 text-cyan-300 hover:bg-cyan-500/10 hover:border-cyan-400/50 transition-all cursor-pointer"
+            className="w-14 h-14 rounded-xl flex items-center justify-center bg-[#0d1826] border border-blue-500/30 text-blue-300 hover:bg-blue-500/15 hover:border-blue-400/60 transition-all cursor-pointer"
             title="Reset Timer"
           >
             <RotateCcw className="w-5 h-5" />
@@ -631,12 +687,13 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
         </div>
       </div>
 
-      {/* SESSION SETTINGS */}
+      {/* ═══════════ SESSION SETTINGS ═══════════ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* SUBJECT */}
-        <div className="rounded-2xl border border-cyan-500/20 bg-[#08121e] p-5">
+        <div className="relative rounded-2xl border border-blue-500/25 bg-[#070f1c] p-5 overflow-hidden">
+          <div className="absolute top-2 right-2 w-3 h-3 border-t border-r border-blue-400/50" />
           <div className="flex items-center gap-2 mb-4">
-            <Target className="w-4 h-4 text-cyan-400" />
+            <Target className="w-4 h-4 text-blue-400" />
             <h2 className="text-xs font-bold text-white tracking-wider uppercase">
               Target Subject
             </h2>
@@ -646,7 +703,7 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
             value={selectedSubject}
             onChange={(e) => setSelectedSubject(e.target.value)}
             disabled={isRunning || isBreak}
-            className="w-full bg-[#030912] border border-cyan-500/25 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-400 disabled:opacity-50"
+            className="w-full bg-[#030812] border border-blue-500/30 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-blue-400 disabled:opacity-50"
           >
             {data.subjects.map((s) => (
               <option key={s.id} value={s.name}>
@@ -662,9 +719,10 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
         </div>
 
         {/* ATMOSPHERE / SOUND */}
-        <div className="rounded-2xl border border-cyan-500/20 bg-[#08121e] p-5">
+        <div className="relative rounded-2xl border border-blue-500/25 bg-[#070f1c] p-5 overflow-hidden">
+          <div className="absolute top-2 right-2 w-3 h-3 border-t border-r border-blue-400/50" />
           <div className="flex items-center gap-2 mb-4">
-            <Volume2 className="w-4 h-4 text-cyan-400" />
+            <Volume2 className="w-4 h-4 text-blue-400" />
             <h2 className="text-xs font-bold text-white tracking-wider uppercase">
               Focus Atmosphere
             </h2>
@@ -677,8 +735,8 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
                 onClick={() => setSoundscape(item.id)}
                 className={`rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-mono uppercase tracking-wider border transition-all cursor-pointer ${
                   soundscape === item.id
-                    ? 'bg-cyan-500/15 border-cyan-400/60 text-cyan-300'
-                    : 'bg-[#030912] border-white/5 text-slate-500 hover:text-slate-300'
+                    ? 'bg-blue-500/20 border-blue-400/70 text-blue-200 shadow-[0_0_14px_rgba(59,130,246,0.25)]'
+                    : 'bg-[#030812] border-white/5 text-slate-500 hover:text-slate-300'
                 }`}
               >
                 {item.label}
@@ -695,8 +753,8 @@ export const FocusScreen: React.FC<Props> = ({ data, onFinishSession }) => {
       </div>
 
       {/* FOOTER */}
-      <div className="rounded-xl border border-white/5 bg-[#070d16] px-4 py-4 flex items-center gap-3">
-        <Clock3 className="w-5 h-5 text-cyan-500 shrink-0" />
+      <div className="rounded-xl border border-white/5 bg-[#060c16] px-4 py-4 flex items-center gap-3">
+        <Shield className="w-5 h-5 text-blue-500 shrink-0" />
         <p className="text-[11px] text-slate-500 leading-relaxed">
           Focus sessions contribute to your study progress, XP and Gold.
           Clear the gate to receive your rewards from the System.
